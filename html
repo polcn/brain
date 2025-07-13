@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Synapse | Interactive Development Plan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutral Harmony -->
+    <!-- Application Structure Plan: A single-page dashboard with a fixed top navigation for smooth scrolling between thematic sections (Vision, Personas, Features, Roadmap, Tech & Risks, KPIs). This structure avoids a linear text dump, allowing stakeholders to jump directly to their area of interest. The goal is to make a dense document easily digestible and explorable. Interactive elements like clickable persona cards, an expandable timeline, and an accordion for risks are chosen to present information on demand, reducing initial cognitive load and encouraging user engagement. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Business Objectives -> Goal: Inform/Motivate -> Viz: Key metric callouts (HTML/CSS) -> Interaction: Static -> Justification: Quick, high-level impact.
+        - Report Info: KPIs (TTI, WAU, CSAT) -> Goal: Inform/Track -> Viz: Bar & Doughnut Charts (Chart.js) -> Interaction: Hover tooltips -> Justification: Visually compelling way to represent targets.
+        - Report Info: User Personas -> Goal: Organize/Empathize -> Viz: Interactive Cards (HTML/CSS) -> Interaction: Click to reveal details -> Justification: Focuses on one persona at a time, making their stories clearer.
+        - Report Info: Development Roadmap -> Goal: Show Change/Process -> Viz: Horizontal Timeline (HTML/CSS) -> Interaction: Click to expand stage details -> Justification: More engaging than a table, shows progression.
+        - Report Info: Technical Architecture -> Goal: Organize/Explain -> Viz: Diagram (HTML/CSS divs) -> Interaction: Static -> Justification: Clear, simplified visual flow of the system without complex SVG.
+        - Report Info: Risks -> Goal: Inform/Organize -> Viz: Accordion List (HTML/CSS) -> Interaction: Click to expand -> Justification: Hides complexity until requested, clean UI.
+        - Library/Method: Chart.js for canvas-based charts. All other visuals are pure HTML/Tailwind CSS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+            color: #383838;
+        }
+        .nav-link {
+            position: relative;
+            transition: color 0.3s ease;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #A58A73;
+            transition: width 0.3s ease;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #A58A73;
+        }
+        .nav-link.active::after, .nav-link:hover::after {
+            width: 100%;
+        }
+        .card-glow {
+            transition: box-shadow 0.3s ease;
+        }
+        .card-glow:hover {
+            box-shadow: 0 0 20px rgba(165, 138, 115, 0.3);
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 1.25rem;
+            left: -0.5rem;
+            width: 1rem;
+            height: 1rem;
+            background-color: #D6C6B9;
+            border-radius: 9999px;
+            border: 2px solid #F8F7F4;
+            z-index: 10;
+        }
+        .timeline-line {
+            position: absolute;
+            top: 1.25rem;
+            left: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #D6C6B9;
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-[#A58A73]">Project Synapse</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#vision" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Vision</a>
+                        <a href="#personas" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Personas</a>
+                        <a href="#features" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Features</a>
+                        <a href="#roadmap" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Roadmap</a>
+                        <a href="#tech" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Tech & Risks</a>
+                        <a href="#kpis" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">KPIs</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        
+        <section id="vision" class="mb-20 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-[#383838]">The Vision: An AI-Powered Consulting Partner</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">Project Synapse isn't just a tool; it's a cognitive assistant designed to synthesize our firm's collective knowledge with real-time intelligence, accelerating client value and creating a durable competitive advantage.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-md card-glow text-center">
+                    <h3 class="text-lg font-semibold text-[#A58A73]">Enhance Productivity</h3>
+                    <p class="mt-2 text-gray-600">Targeting a <span class="font-bold text-2xl text-[#383838]">25%</span> reduction in time spent on research and data synthesis.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md card-glow text-center">
+                    <h3 class="text-lg font-semibold text-[#A58A73]">Improve Quality</h3>
+                    <p class="mt-2 text-gray-600">Ensure deliverables are informed by the most current and comprehensive data available.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md card-glow text-center">
+                    <h3 class="text-lg font-semibold text-[#A58A73]">Accelerate Onboarding</h3>
+                    <p class="mt-2 text-gray-600">Provide new hires with immediate access to project histories and firm-wide best practices.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md card-glow text-center">
+                    <h3 class="text-lg font-semibold text-[#A58A73]">Create Knowledge Moat</h3>
+                    <p class="mt-2 text-gray-600">Transform unstructured data into a proprietary, perpetually growing institutional asset.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="personas" class="mb-20 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-[#383838]">Meet the Users</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">To build a truly effective tool, we've focused on the distinct goals and pain points of our key users. Click on a persona to understand their journey.</p>
+            </div>
+            <div id="persona-container" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            </div>
+        </section>
+
+        <section id="features" class="mb-20 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-[#383838]">Prioritized Features</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">Our development is guided by user stories, focusing on delivering the most critical capabilities first.</p>
+            </div>
+            <div id="feature-container" class="space-y-6">
+            </div>
+        </section>
+
+        <section id="roadmap" class="mb-20 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-[#383838]">The Development Roadmap</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">We're building Project Synapse iteratively to de-risk development and deliver value at each stage. Click a stage to see the details.</p>
+            </div>
+            <div class="relative pl-4">
+                <div class="timeline-line"></div>
+                <div id="roadmap-container" class="space-y-12">
+                </div>
+            </div>
+        </section>
+        
+        <section id="tech" class="mb-20 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-[#383838]">Technology & Risk Mitigation</h2>
+                 <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">A look under the hood at the agent's architecture and our proactive strategies for managing key project risks.</p>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div>
+                    <h3 class="text-2xl font-semibold text-center mb-6">Core Architecture</h3>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <div class="space-y-4 text-center font-medium">
+                            <div class="bg-sky-100 text-sky-800 p-3 rounded-lg">User Interface</div>
+                            <div class="text-gray-400">↓ (API Gateway)</div>
+                            <div class="bg-blue-100 text-blue-800 p-3 rounded-lg">Amazon Bedrock Agent (Claude 3 Sonnet)</div>
+                            <div class="flex justify-around items-center text-gray-400">
+                                <div class="w-1/2 h-px bg-gray-300"></div>
+                                <div>↓</div>
+                                <div class="w-1/2 h-px bg-gray-300"></div>
+                            </div>
+                            <div class="flex justify-around gap-4">
+                                <div class="w-1/2 bg-amber-100 text-amber-800 p-3 rounded-lg">Tool 1: Internal Knowledge (OpenSearch)</div>
+                                <div class="w-1/2 bg-green-100 text-green-800 p-3 rounded-lg">Tool 2: Web Search (Lambda)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 <div>
+                    <h3 class="text-2xl font-semibold text-center mb-6">Key Risks & Mitigations</h3>
+                    <div id="risk-container" class="space-y-4">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="kpis" class="mb-16 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-[#383838]">Measuring Success</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">Success is not subjective. We will measure the agent's impact against a clear set of key performance indicators tied to our business objectives.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-md card-glow">
+                    <h3 class="text-xl font-semibold text-center mb-4 text-[#A58A73]">Time-to-Information</h3>
+                    <div class="chart-container h-64 md:h-72">
+                        <canvas id="ttiChart"></canvas>
+                    </div>
+                     <p class="text-center mt-4 text-gray-600">Target: <span class="font-bold">50% reduction</span> vs manual methods.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md card-glow">
+                    <h3 class="text-xl font-semibold text-center mb-4 text-[#A58A73]">Weekly Active Users</h3>
+                    <div class="chart-container h-64 md:h-72">
+                        <canvas id="wauChart"></canvas>
+                    </div>
+                    <p class="text-center mt-4 text-gray-600">Target: <span class="font-bold">60% adoption</span> within 3 months.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md card-glow">
+                    <h3 class="text-xl font-semibold text-center mb-4 text-[#A58A73]">User Satisfaction (CSAT)</h3>
+                    <div class="chart-container h-64 md:h-72">
+                        <canvas id="csatChart"></canvas>
+                    </div>
+                     <p class="text-center mt-4 text-gray-600">Target: <span class="font-bold">4.5 / 5.0</span> average score.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <footer class="bg-white border-t border-gray-200">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-gray-500 text-sm">
+            <p>&copy; 2025 Project Synapse Initiative. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            const personaData = [
+                {
+                    name: "Eleanor, Senior Partner",
+                    icon: "👑",
+                    painPoint: "I have no time to sift through hours of transcripts. I need the executive summary and key action items immediately.",
+                    solution: "Provides instant, concise summaries of recent client interactions, surfacing key decisions and action items on demand."
+                },
+                {
+                    name: "Ben, Engagement Manager",
+                    icon: "⚙️",
+                    painPoint: "My team is spending too much time on foundational research. I need them focused on higher-value analysis.",
+                    solution: "Automates routine research, allowing delegation of complex queries (e.g., 'Summarize Topic A and compare with industry news')."
+                },
+                {
+                    name: "Chloe, Junior Analyst",
+                    icon: "📚",
+                    painPoint: "I'm new and often feel I'm missing critical historical context. I don't know what I don't know.",
+                    solution: "Acts as an omniscient guide to the firm's knowledge, uncovering relevant historical documents, emails, and data."
+                }
+            ];
+
+            const featureData = [
+                { priority: "Must-have", user: "Ben", story: "As an Engagement Manager, I want to upload a batch of client meeting transcripts and related documents so that they are securely stored and immediately available for the team to query." },
+                { priority: "Must-have", user: "Eleanor", story: "As a Senior Partner, I want to ask, 'What were the key outcomes from my last call with Client X?' and receive a concise, summarized answer." },
+                { priority: "Should-have", user: "Chloe", story: "As a Junior Analyst, I want to ask, 'Summarize our last meeting with Client Y and find recent news articles about their new product launch' to get a comprehensive briefing in one step." }
+            ];
+
+            const roadmapData = [
+                {
+                    stage: "Stage 1: The Foundation (MVP)",
+                    timeline: "Weeks 1-6",
+                    goal: "Establish the core data ingestion pipeline and a functional internal knowledge retrieval system.",
+                    deliverables: ["Functional data ingestion pipeline", "Populated vector database (Amazon OpenSearch)", "A basic web UI for single-source RAG queries."],
+                    success: "Successfully ingest 100 test docs & answer 10 predefined queries."
+                },
+                {
+                    stage: "Stage 2: The Agent",
+                    timeline: "Weeks 7-12",
+                    goal: "Evolve the system from a simple RAG tool to a sophisticated, multi-tool agent capable of complex reasoning and orchestration.",
+                    deliverables: ["Configured Amazon Bedrock Agent", "Integrated Web Search tool", "Demonstrated multi-step task execution."],
+                    success: "Agent correctly uses single tools and both tools for compound questions."
+                },
+                {
+                    stage: "Stage 3: Enhancement & Optimization",
+                    timeline: "Weeks 13-16",
+                    goal: "Refine the user experience, add conversational context, implement robust monitoring, and prepare for a controlled internal rollout.",
+                    deliverables: ["Production-ready UI/UX", "Agent with conversational memory", "CloudWatch monitoring and logging dashboards", "Pilot program launch."],
+                    success: "Agent handles follow-up questions; monitoring dashboard is live."
+                }
+            ];
+            
+            const riskData = [
+                { name: "LLM Hallucination", impact: "High", mitigation: "This is the most critical risk. Mitigation is multi-layered: 1) Strict Grounding: All claims are cited. 2) Prompt Engineering: The agent is instructed to state it cannot find information if there is no evidence. 3) User Feedback Loop: A UI feedback mechanism will capture and help refine the agent's instructions." },
+                { name: "Poor Source Data Quality", impact: "Medium", mitigation: "The agent's output quality depends on input quality. Mitigation: 1) Pre-processing: Clean and standardize text on ingestion. 2) Data Quality Monitoring: An admin dashboard will be used to review and flag problematic source documents." },
+                { name: "Faulty Orchestration", impact: "Medium", mitigation: "The agent fails to select the correct tool or misinterprets intent. Mitigation: 1) Iterative Development: Start with simple tools and add complexity gradually. 2) Rigorous Testing: Develop a comprehensive test suite of queries. 3) Transparent Logging: Log the agent's 'chain of thought' to debug failures." }
+            ];
+
+
+            const personaContainer = document.getElementById('persona-container');
+            personaData.forEach(p => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-6 rounded-xl shadow-md card-glow cursor-pointer";
+                card.innerHTML = `
+                    <div class="flex items-center mb-4">
+                        <span class="text-3xl mr-4">${p.icon}</span>
+                        <h3 class="text-xl font-semibold text-[#383838]">${p.name}</h3>
+                    </div>
+                    <div class="persona-content">
+                        <p class="text-gray-500 italic mb-3">"${p.painPoint}"</p>
+                        <p class="text-gray-700"><span class="font-semibold text-[#A58A73]">How the Agent Helps:</span> ${p.solution}</p>
+                    </div>
+                `;
+                personaContainer.appendChild(card);
+            });
+            
+            const featureContainer = document.getElementById('feature-container');
+            featureData.forEach(f => {
+                const priorityColor = f.priority === 'Must-have' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800';
+                const featureEl = document.createElement('div');
+                featureEl.className = 'bg-white p-6 rounded-xl shadow-md card-glow';
+                featureEl.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-2">
+                         <h4 class="text-lg font-semibold text-[#383838]">${f.user}'s Story</h4>
+                         <span class="text-sm font-medium px-3 py-1 rounded-full ${priorityColor} mt-2 sm:mt-0">${f.priority}</span>
+                    </div>
+                    <p class="text-gray-600">"${f.story}"</p>
+                `;
+                featureContainer.appendChild(featureEl);
+            });
+
+            const roadmapContainer = document.getElementById('roadmap-container');
+            roadmapData.forEach((r, index) => {
+                const roadmapEl = document.createElement('div');
+                roadmapEl.className = "relative pl-8 timeline-item";
+                roadmapEl.innerHTML = `
+                    <div class="cursor-pointer">
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-xl font-semibold text-[#A58A73]">${r.stage}</h4>
+                            <span class="text-sm font-medium text-gray-500">${r.timeline}</span>
+                        </div>
+                        <p class="text-gray-700 mt-1">${r.goal}</p>
+                    </div>
+                    <div class="accordion-content pt-4">
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                             <h5 class="font-semibold mb-2">Key Deliverables:</h5>
+                             <ul class="list-disc list-inside text-gray-600 space-y-1 mb-3">
+                                ${r.deliverables.map(d => `<li>${d}</li>`).join('')}
+                             </ul>
+                             <p class="text-gray-600"><span class="font-semibold">Success Looks Like:</span> ${r.success}</p>
+                        </div>
+                    </div>
+                `;
+                roadmapContainer.appendChild(roadmapEl);
+                roadmapEl.querySelector('.cursor-pointer').addEventListener('click', () => {
+                    const content = roadmapEl.querySelector('.accordion-content');
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+            });
+            
+            const riskContainer = document.getElementById('risk-container');
+            riskData.forEach(r => {
+                const impactColor = r.impact === 'High' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800';
+                const riskEl = document.createElement('div');
+                riskEl.className = 'bg-white rounded-xl shadow-md overflow-hidden';
+                riskEl.innerHTML = `
+                    <div class="p-4 cursor-pointer flex justify-between items-center">
+                        <h4 class="font-semibold text-gray-700">${r.name}</h4>
+                        <span class="text-xs font-medium px-2 py-1 rounded-full ${impactColor}">${r.impact} Impact</span>
+                    </div>
+                    <div class="accordion-content px-4 pb-4">
+                        <p class="text-gray-600">${r.mitigation}</p>
+                    </div>
+                `;
+                riskContainer.appendChild(riskEl);
+                riskEl.querySelector('.cursor-pointer').addEventListener('click', () => {
+                    const content = riskEl.querySelector('.accordion-content');
+                     if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+            });
+
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 100) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').substring(1) === current) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+            
+            const commonChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                     x: { grid: { display: false } },
+                     y: { beginAtZero: true, grid: { color: '#e5e7eb' } }
+                }
+            };
+            
+            new Chart(document.getElementById('ttiChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Manual Research', 'With Agent'],
+                    datasets: [{
+                        label: 'Time-to-Information',
+                        data: [100, 50],
+                        backgroundColor: ['#D6C6B9', '#A58A73'],
+                        borderRadius: 4
+                    }]
+                },
+                options: commonChartOptions
+            });
+
+            new Chart(document.getElementById('wauChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Target Adoption', 'Remaining'],
+                    datasets: [{
+                        data: [60, 40],
+                        backgroundColor: ['#A58A73', '#F8F7F4'],
+                        borderColor: ['#A58A73', '#D6C6B9'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                     plugins: { legend: { display: false }, tooltip: {
+                        callbacks: { label: (context) => `${context.label}: ${context.raw}%` }
+                    }},
+                    cutout: '70%'
+                }
+            });
+
+            new Chart(document.getElementById('csatChart'), {
+                 type: 'bar',
+                data: {
+                    labels: ['Target Score'],
+                    datasets: [{
+                        label: 'CSAT Score',
+                        data: [4.5],
+                        backgroundColor: ['#A58A73'],
+                        barPercentage: 0.5,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    ...commonChartOptions,
+                    scales: { ...commonChartOptions.scales, y: { ...commonChartOptions.scales.y, max: 5 } }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
