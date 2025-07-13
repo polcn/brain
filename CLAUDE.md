@@ -157,6 +157,66 @@ If migrating from Pinecone to pgvector:
 4. Check S3 permissions if uploads fail
 5. Verify Bedrock model access in correct region
 
+## Development Setup
+
+### Getting Started
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/polcn/brain.git
+   cd brain
+   ```
+
+2. Set up local development environment:
+   ```bash
+   # Start Docker services
+   docker-compose up -d
+   
+   # Create virtual environment
+   python3.9 -m venv venv
+   source venv/bin/activate
+   
+   # Install all dependencies
+   pip install -r requirements-dev.txt
+   ```
+
+3. Configure environment:
+   ```bash
+   cp .env.example .env
+   # Edit .env with appropriate values
+   ```
+
+### Git Workflow
+- The repository uses GitHub CLI for authentication
+- Main branch is protected - work in feature branches
+- Commit messages should be descriptive (no emoji or attribution lines)
+- Run tests before pushing
+
+### Local Development Commands
+```bash
+# Run with auto-reload
+uvicorn backend.app:app --reload --port 8001
+
+# Run tests
+pytest -v
+
+# Format code
+black backend/
+isort backend/
+
+# Type checking
+mypy backend/
+
+# Start all services
+docker-compose up
+```
+
+## Repository Information
+
+- **GitHub**: https://github.com/polcn/brain
+- **Primary Branch**: main
+- **Issue Tracking**: GitHub Issues
+- **Documentation**: See REQUIREMENTS.md for detailed architecture
+
 ## Contact
 
 For architectural decisions or major changes, refer to REQUIREMENTS.md first. This project prioritizes simplicity and cost-effectiveness over scale for the POC phase.
