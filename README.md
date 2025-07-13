@@ -82,6 +82,22 @@ curl -X POST -H "Content-Type: application/json" \
 curl http://localhost:8001/api/documents
 ```
 
+## Project Status
+
+🚧 **POC In Development** - Core backend structure implemented, services in progress.
+
+### Completed
+- ✅ FastAPI backend structure
+- ✅ Database models (PostgreSQL + pgvector)
+- ✅ API endpoints structure
+- ✅ Alembic migration setup
+- ✅ Development environment
+
+### In Progress
+- 🔄 Vector store service implementation
+- 🔄 Bedrock integration
+- 🔄 Document processing pipeline
+
 ## Architecture
 
 ```

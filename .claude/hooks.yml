@@ -1,0 +1,11 @@
+# Claude hooks configuration
+# Plays sounds when Claude completes tasks or needs input
+
+hooks:
+  # Sound when Claude finishes a response
+  - event: response_complete
+    script: .claude/hooks/completion-sound.sh
+    
+  # Sound when a tool completes (especially TodoWrite)
+  - event: tool_use_complete
+    script: .claude/hooks/completion-sound.sh
