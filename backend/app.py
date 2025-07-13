@@ -9,7 +9,8 @@ from prometheus_client import make_asgi_app
 
 from backend.core.config import settings
 from backend.core.logger import get_logger
-from backend.api import documents, chat, health
+from backend.api.v1 import api_router
+from backend.core.database import get_db_pool
 
 logger = get_logger(__name__)
 
@@ -18,7 +19,14 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     logger.info("Starting Brain application", version=settings.version)
+    
+    # Initialize database pool
+    await get_db_pool()
+    logger.info("Database pool initialized")
+    
     yield
+    
+    # Cleanup
     logger.info("Shutting down Brain application")
 
 
@@ -45,9 +53,7 @@ metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
 
 # Include routers
-app.include_router(health.router, prefix="/api", tags=["health"])
-app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
-app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+app.include_router(api_router)
 
 
 @app.get("/")
