@@ -67,36 +67,42 @@ uvicorn backend.app:app --host 0.0.0.0 --port 8001
 ### Upload Document
 ```bash
 curl -X POST -F "file=@document.pdf" \
-  http://localhost:8001/api/documents/upload
+  http://localhost:8001/api/v1/documents/upload
 ```
 
 ### Query Documents
 ```bash
 curl -X POST -H "Content-Type: application/json" \
   -d '{"query":"What is the main topic of the documents?"}' \
-  http://localhost:8001/api/chat
+  http://localhost:8001/api/v1/chat
 ```
 
 ### List Documents
 ```bash
-curl http://localhost:8001/api/documents
+curl http://localhost:8001/api/v1/documents
 ```
 
 ## Project Status
 
-🚧 **POC In Development** - Core backend structure implemented, services in progress.
+🚧 **POC In Development** - Core backend services implemented, testing and deployment setup in progress.
 
 ### Completed
 - ✅ FastAPI backend structure
 - ✅ Database models (PostgreSQL + pgvector)
-- ✅ API endpoints structure
+- ✅ API endpoints (v1 fully functional)
 - ✅ Alembic migration setup
 - ✅ Development environment
+- ✅ Vector store service (pgvector integration)
+- ✅ Embeddings service (Bedrock Titan)
+- ✅ LLM service (Bedrock Claude)
+- ✅ Document processing pipeline
+- ✅ File redaction integration
+- ✅ S3 storage integration
 
 ### In Progress
-- 🔄 Vector store service implementation
-- 🔄 Bedrock integration
-- 🔄 Document processing pipeline
+- 🔄 Unit and integration tests
+- 🔄 Docker Compose setup
+- 🔄 Frontend React application
 
 ## Architecture
 
