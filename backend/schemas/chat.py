@@ -15,16 +15,19 @@ class ChatSource(BaseModel):
     similarity_score: float
 
 
-class ChatRequest(BaseModel):
-    query: str
-    max_results: Optional[int] = 5
-
-
 class ChatMessage(BaseModel):
     role: str  # 'user' or 'assistant'
     content: str
     timestamp: Optional[datetime] = None
     sources: Optional[List[ChatSource]] = None
+
+
+class ChatRequest(BaseModel):
+    query: str
+    max_results: Optional[int] = 5
+    document_ids: Optional[List[UUID]] = None
+    similarity_threshold: Optional[float] = 0.7
+    chat_history: Optional[List[ChatMessage]] = None
 
 
 class ChatCompletionRequest(BaseModel):

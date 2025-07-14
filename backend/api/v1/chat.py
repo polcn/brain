@@ -15,7 +15,8 @@ from ...schemas.chat import (
     ChatMessage,
     SearchRequest,
     SearchResponse,
-    SearchResult
+    SearchResult,
+    DocumentSource
 )
 from ...core.dependencies import (
     get_db,
@@ -23,6 +24,7 @@ from ...core.dependencies import (
     get_vector_store,
     get_llm_service
 )
+from backend.core.auth_dependencies import get_current_user_optional
 from ...services import EmbeddingsService, VectorStore, LLMService
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 @router.post("/", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
+    current_user: Optional[dict] = Depends(get_current_user_optional),
     db: asyncpg.Connection = Depends(get_db),
     embeddings_service: EmbeddingsService = Depends(get_embeddings_service),
     vector_store: VectorStore = Depends(get_vector_store),
@@ -43,11 +46,24 @@ async def chat(
         # Generate embedding for the query
         query_embedding = await embeddings_service.generate_embedding(request.query)
         
+        # If user is authenticated, filter to their documents
+        filter_document_ids = None
+        if request.document_ids:
+            filter_document_ids = [UUID(id) for id in request.document_ids]
+        elif current_user:
+            # Get user's document IDs
+            user_docs = await db.fetch(
+                "SELECT id FROM documents WHERE user_id = $1",
+                current_user["id"]
+            )
+            if user_docs:
+                filter_document_ids = [doc["id"] for doc in user_docs]
+        
         # Search for relevant chunks
         search_results = await vector_store.similarity_search(
             query_embedding=query_embedding,
             k=request.max_results,
-            filter_document_ids=[UUID(id) for id in request.document_ids] if request.document_ids else None,
+            filter_document_ids=filter_document_ids,
             threshold=request.similarity_threshold
         )
         
@@ -65,23 +81,45 @@ async def chat(
             doc_id = metadata.get('document_id')
             if doc_id:
                 doc = await db.fetchrow(
-                    "SELECT name FROM documents WHERE id = $1",
+                    "SELECT original_name FROM documents WHERE id = $1",
                     UUID(doc_id)
                 )
-                if doc and doc['name'] not in sources:
-                    sources.append(doc['name'])
+                if doc and doc['original_name'] not in sources:
+                    sources.append(doc['original_name'])
         
         # Generate response
+        logger.info(f"Calling LLM service with stream=False")
         response_text = await llm_service.generate_response(
             query=request.query,
             context_chunks=context_chunks,
-            chat_history=request.chat_history
+            chat_history=request.chat_history,
+            stream=False
         )
+        logger.info(f"LLM response type: {type(response_text)}")
+        
+        # Convert sources to DocumentSource objects  
+        document_sources = []
+        seen_docs = set()
+        for _, _, similarity, metadata in search_results:
+            doc_id = metadata.get('document_id')
+            if doc_id and doc_id not in seen_docs:
+                doc = await db.fetchrow(
+                    "SELECT original_name FROM documents WHERE id = $1",
+                    UUID(doc_id)
+                )
+                if doc:
+                    document_sources.append(DocumentSource(
+                        document_id=doc_id,
+                        document_name=doc['original_name'],
+                        chunk_id="",  # Not used for now
+                        similarity_score=similarity
+                    ))
+                    seen_docs.add(doc_id)
         
         return ChatResponse(
-            response=response_text,
-            sources=sources,
-            confidence=sum(r[2] for r in search_results) / len(search_results) if search_results else 0.0
+            answer=response_text,
+            sources=document_sources[:3],  # Limit to top 3 sources
+            context_used=len(search_results) > 0
         )
         
     except Exception as e:
@@ -104,11 +142,24 @@ async def search_documents(
         # Generate embedding for the query
         query_embedding = await embeddings_service.generate_embedding(request.query)
         
+        # If user is authenticated, filter to their documents
+        filter_document_ids = None
+        if request.document_ids:
+            filter_document_ids = [UUID(id) for id in request.document_ids]
+        elif current_user:
+            # Get user's document IDs
+            user_docs = await db.fetch(
+                "SELECT id FROM documents WHERE user_id = $1",
+                current_user["id"]
+            )
+            if user_docs:
+                filter_document_ids = [doc["id"] for doc in user_docs]
+        
         # Search for relevant chunks
         search_results = await vector_store.similarity_search(
             query_embedding=query_embedding,
             k=request.max_results,
-            filter_document_ids=[UUID(id) for id in request.document_ids] if request.document_ids else None,
+            filter_document_ids=filter_document_ids,
             threshold=request.similarity_threshold
         )
         
@@ -121,11 +172,11 @@ async def search_documents(
             
             if doc_id:
                 doc = await db.fetchrow(
-                    "SELECT name FROM documents WHERE id = $1",
+                    "SELECT original_name FROM documents WHERE id = $1",
                     UUID(doc_id)
                 )
                 if doc:
-                    doc_name = doc['name']
+                    doc_name = doc['original_name']
             
             results.append(SearchResult(
                 chunk_id=str(chunk_id),

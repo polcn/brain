@@ -57,6 +57,7 @@ class LLMService:
         """
         # Use mock implementation if Bedrock is not available
         if self.use_mock:
+            logger.info(f"Using mock LLM (stream={stream})")
             return await self._generate_mock_response(query, context_chunks, chat_history, stream)
         
         # Build the prompt
@@ -64,11 +65,13 @@ class LLMService:
         
         try:
             if stream:
+                logger.info("Generating streaming response")
                 return self._stream_response(prompt)
             else:
+                logger.info("Generating complete response")
                 return await self._generate_complete(prompt)
         except Exception as e:
-            logger.error(f"Bedrock LLM failed: {e}. Falling back to mock LLM.")
+            logger.error(f"Bedrock LLM failed: {e}. Falling back to mock LLM. Stream={stream}")
             self.use_mock = True
             return await self._generate_mock_response(query, context_chunks, chat_history, stream)
     
@@ -257,8 +260,10 @@ class LLMService:
         response += " (This is a mock response for development/testing purposes.)"
         
         if stream:
+            logger.info("Returning mock streaming response")
             return self._mock_stream_response(response)
         else:
+            logger.info(f"Returning mock complete response: {response[:50]}...")
             return response
     
     async def _mock_stream_response(self, response: str) -> AsyncGenerator[str, None]:

@@ -120,12 +120,43 @@ When adding new features:
 4. Update documentation for API changes
 5. Consider performance impact of changes
 
+## Authentication Implementation Details
+
+### JWT Authentication (Completed)
+- Implemented full JWT-based authentication system
+- Created `users` table with bcrypt password hashing
+- All document operations are now user-scoped
+- Admin endpoints require `is_superuser` flag
+- Default admin user: admin/admin123 (change in production!)
+
+### Key Files for Auth
+- `backend/models/user.py` - User model
+- `backend/core/auth.py` - JWT and password utilities
+- `backend/core/auth_dependencies.py` - FastAPI auth dependencies
+- `backend/api/auth.py` - Authentication endpoints
+- `backend/api/users.py` - User management endpoints
+- `backend/migrations/add_users_table.sql` - Database migration
+- `scripts/init_auth.py` - Initialize auth tables
+
+### Authentication Flow
+1. User registers or logs in via `/api/v1/auth/login`
+2. Server returns JWT token (30-minute expiration)
+3. Client includes token in Authorization header: `Bearer <token>`
+4. Dependencies verify token and load user for each request
+5. Documents are filtered by user_id automatically
+
+### Known Auth Issues
+- Email validation requires valid domains (no .local)
+- OAuth2PasswordBearer requires `auto_error=False` for optional auth
+- Some endpoints use asyncpg directly instead of SQLAlchemy
+
 ## Database Schema
 
 Key tables to understand:
-- `documents`: Document metadata and status
+- `users`: User accounts with authentication info
+- `documents`: Document metadata and status (with user_id FK)
 - `chunks`: Text chunks with vector embeddings
-- `audit_log`: All system actions for compliance
+- `audit_log`: All system actions for compliance (with user_id FK)
 
 ## Useful Commands
 

@@ -81,6 +81,15 @@ Implemented mock services for local development without AWS Bedrock:
 - **Health Checks**: All services report mock/real status in health endpoints
 - **Full Pipeline**: Complete document processing and chat functionality without AWS dependencies
 
+### 9. JWT Authentication Implementation
+Added complete JWT-based authentication system:
+- **User Management**: Users table with bcrypt password hashing
+- **JWT Tokens**: 30-minute access tokens with HS256 algorithm
+- **Protected Endpoints**: All document operations require authentication
+- **Multi-tenancy**: Documents are scoped to individual users
+- **Admin Features**: Superuser endpoints for user management
+- **Default Admin**: Created admin user (admin/admin123) for initial setup
+
 ## Known Issues and Limitations
 
 ### 1. Bedrock Access
@@ -98,7 +107,12 @@ Implemented mock services for local development without AWS Bedrock:
 - **Issue**: Not tested due to initial disk space constraints
 - **Solution**: Disk space expanded, ready for testing
 
-### 4. Database Migrations
+### 4. Chat Endpoint Response Format
+- **Issue**: Mock LLM service returns generator instead of string
+- **Impact**: Chat endpoint returns validation error
+- **Workaround**: Minor code fix needed in LLM service
+
+### 5. Database Migrations
 - **Issue**: Alembic migrations fail on existing tables
 - **Solution**: Need to implement proper migration strategy
 
@@ -128,18 +142,15 @@ BEDROCK_EMBEDDING_MODEL="amazon.titan-embed-text-v1"
 
 ### Local Development (with MinIO)
 ```bash
-# Start base services
-docker compose up -d postgres redis minio
+# Start all services
+docker compose up -d
 
-# Create MinIO bucket
-docker exec brain-minio mc alias set minio http://localhost:9000 minioadmin minioadmin
-docker exec brain-minio mc mb minio/brain-documents --ignore-existing
+# Initialize authentication (creates admin user)
+docker exec brain-backend python scripts/init_auth.py
 
-# Run backend
-docker run -d --name brain-backend --network brain_brain-network -p 8001:8001 \
-  [environment variables] \
-  brain-backend \
-  sh -c "python scripts/wait_for_db.py && uvicorn backend.app:app --host 0.0.0.0 --port 8001"
+# Default admin credentials:
+# Username: admin
+# Password: admin123
 ```
 
 ### Production Deployment
@@ -197,13 +208,15 @@ curl -X POST -H "Content-Type: application/json" \
    - Configure Bedrock access for production-grade responses
    - Resolve redaction API authentication issues
    - Implement proper migration strategy
-   - Add authentication/authorization
    - Configure HTTPS/SSL
    - Set up monitoring and logging
+   - Change default admin password
 
 3. **Current Working Features**
+   - JWT authentication with user management
+   - Multi-tenant document isolation
    - Full document upload pipeline with mock services
-   - Chat/Q&A functionality with mock responses
+   - Chat/Q&A functionality with mock responses (minor issue with response format)
    - Vector search with mock embeddings
    - Document redaction with polcn/redact API integration
    - S3-compatible storage with MinIO

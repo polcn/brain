@@ -4,6 +4,8 @@ Brain is a document-based AI assistant that combines document redaction, vector 
 
 ## Features
 
+- **JWT Authentication**: Secure API access with JSON Web Tokens
+- **User Management**: Multi-tenant support with user-scoped documents
 - **Automatic Document Redaction**: Integrates with [polcn/redact](https://github.com/polcn/redact) to remove PII before processing
 - **Vector Search**: Uses PostgreSQL with pgvector for efficient similarity search
 - **LLM Integration**: Powered by Amazon Bedrock (Claude Instant + Titan Embeddings)
@@ -94,22 +96,53 @@ uvicorn backend.app:app --host 0.0.0.0 --port 8001
 
 ## API Usage
 
-### Upload Document
+### Authentication
+
+#### Register a new user
 ```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","username":"newuser","password":"securepass123"}' \
+  http://localhost:8001/api/v1/auth/register
+```
+
+#### Login
+```bash
+# Returns JWT token
+curl -X POST -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=newuser&password=securepass123" \
+  http://localhost:8001/api/v1/auth/login
+
+# Or with JSON
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"username":"newuser","password":"securepass123"}' \
+  http://localhost:8001/api/v1/auth/login-json
+```
+
+### Using Protected Endpoints
+
+All document operations require authentication. Include the JWT token in the Authorization header:
+
+#### Upload Document
+```bash
+TOKEN="your-jwt-token"
 curl -X POST -F "file=@document.pdf" \
+  -H "Authorization: Bearer $TOKEN" \
   http://localhost:8001/api/v1/documents/upload
 ```
 
-### Query Documents
+#### Query Documents
 ```bash
 curl -X POST -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{"query":"What is the main topic of the documents?"}' \
   http://localhost:8001/api/v1/chat/
 ```
 
-### List Documents
+#### List Documents
 ```bash
-curl http://localhost:8001/api/v1/documents
+# Lists only documents owned by the authenticated user
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8001/api/v1/documents
 ```
 
 ## Project Status
@@ -131,6 +164,9 @@ curl http://localhost:8001/api/v1/documents
 - ✅ Mock services for embeddings and LLM (automatic fallback)
 - ✅ Full document processing pipeline with mock services
 - ✅ Chat/Q&A functionality with mock responses
+- ✅ JWT authentication with user management
+- ✅ Multi-tenant document isolation
+- ✅ Admin user management endpoints
 
 ### Working with Mock Services
 - ✅ Document processing (works with mock embeddings)
@@ -140,9 +176,9 @@ curl http://localhost:8001/api/v1/documents
 - ⚠️ File redaction (integrated polcn/redact API, experiencing 403 errors but has fallback)
 
 ### In Progress
-- 🔄 JWT Authentication implementation
 - 🔄 Frontend deployment and testing
 - 🔄 Production deployment configuration
+- 🔄 Database migration strategy improvements
 
 ## Architecture
 
@@ -216,26 +252,33 @@ alembic upgrade head
 
 ## Security
 
-- All documents are redacted before storage using polcn/redact
-- Audit logging for all operations
-- No public S3 access
-- SQL injection prevention through parameterized queries
-- Environment-based configuration for secrets
-- Docker secrets support for production
+- **JWT Authentication**: All API endpoints require valid JWT tokens
+- **User Isolation**: Documents are scoped to individual users
+- **Password Security**: Bcrypt hashing for secure password storage
+- **Document Redaction**: All documents are redacted before storage using polcn/redact
+- **Audit Logging**: All operations are logged with user tracking
+- **No Public S3 Access**: Secure document storage
+- **SQL Injection Prevention**: Parameterized queries throughout
+- **Environment-based Configuration**: Secrets management via environment variables
+- **Docker Secrets Support**: Production-ready secrets handling
 
-**Note**: JWT authentication is planned but not yet implemented. Currently using basic authentication.
+### Default Admin Account
+For initial setup, a default admin account is created:
+- Username: `admin`
+- Password: `admin123`
+- **Important**: Change this password immediately in production!
 
 ## Limitations
 
 This is a POC with the following constraints:
-- Basic authentication only (JWT planned)
-- Single-tenant design
 - Limited to PDF, TXT, and DOCX files
 - English language support only
 - No real-time collaboration features
 - Limited to 10MB file uploads
 - Mock services provide simplified responses for demo purposes
 - Production deployment requires proper AWS Bedrock access for optimal performance
+- Chat endpoint has a minor issue with mock LLM response format
+- Redaction API returns 403 errors (falls back to unredacted text)
 
 ## Contributing
 

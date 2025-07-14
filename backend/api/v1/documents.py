@@ -22,6 +22,7 @@ from ...core.dependencies import (
     get_document_processor,
     get_vector_store
 )
+from backend.core.auth_dependencies import get_current_active_user
 from ...services.document_processor import DocumentProcessor
 from ...services.vector_store import VectorStore
 
@@ -33,6 +34,7 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 @router.post("/upload", response_model=DocumentResponse)
 async def upload_document(
     file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_active_user),
     db: asyncpg.Connection = Depends(get_db),
     document_processor: DocumentProcessor = Depends(get_document_processor)
 ):
@@ -62,15 +64,16 @@ async def upload_document(
         # Insert document record
         await db.execute(
             """
-            INSERT INTO documents (id, filename, original_name, content_type, file_size, status)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO documents (id, filename, original_name, content_type, file_size, status, user_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             """,
             document_id,
             file.filename,
             file.filename,
             file.content_type,
             len(content),
-            "processing"
+            "processing",
+            current_user["id"]
         )
         
         # Process document asynchronously
@@ -105,13 +108,14 @@ async def upload_document(
         
         return DocumentResponse(
             id=row['id'],
-            name=row['original_name'],
-            mime_type=row['content_type'],
-            size=row['file_size'],
+            filename=row['filename'],
+            original_name=row['original_name'],
+            file_size=row['file_size'],
+            content_type=row['content_type'],
             status=row['status'],
-            chunk_count=0,  # We don't have this in DB yet
+            error_message=row.get('error_message'),
             created_at=row['created_at'],
-            processed_at=row['updated_at']
+            updated_at=row['updated_at']
         )
         
     except Exception as e:
@@ -139,23 +143,24 @@ async def list_documents(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     status: Optional[DocumentProcessingStatus] = None,
+    current_user: dict = Depends(get_current_active_user),
     db: asyncpg.Connection = Depends(get_db)
 ):
-    """List all documents with optional filtering."""
-    # Build query
-    query = "SELECT * FROM documents"
-    params = []
+    """List documents for the current user with optional filtering."""
+    # Build query - filter by user
+    query = "SELECT * FROM documents WHERE user_id = $1"
+    params = [current_user["id"]]
     
     if status:
-        query += " WHERE status = $1"
+        query += " AND status = $2"
         params.append(status)
     
     query += " ORDER BY created_at DESC"
     
     # Get total count
-    count_query = "SELECT COUNT(*) FROM documents"
+    count_query = "SELECT COUNT(*) FROM documents WHERE user_id = $1"
     if status:
-        count_query += " WHERE status = $1"
+        count_query += " AND status = $2"
     
     total = await db.fetchval(count_query, *params)
     
@@ -169,13 +174,14 @@ async def list_documents(
     documents = [
         DocumentResponse(
             id=row['id'],
-            name=row['original_name'],
-            mime_type=row['content_type'],
-            size=row['file_size'],
+            filename=row['filename'],
+            original_name=row['original_name'],
+            file_size=row['file_size'],
+            content_type=row['content_type'],
             status=row['status'],
-            chunk_count=0,  # Not stored in DB yet
+            error_message=row.get('error_message'),
             created_at=row['created_at'],
-            processed_at=row['updated_at']
+            updated_at=row['updated_at']
         )
         for row in rows
     ]
@@ -191,12 +197,13 @@ async def list_documents(
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
     document_id: UUID,
+    current_user: dict = Depends(get_current_active_user),
     db: asyncpg.Connection = Depends(get_db)
 ):
     """Get a specific document by ID."""
     row = await db.fetchrow(
-        "SELECT * FROM documents WHERE id = $1",
-        document_id
+        "SELECT * FROM documents WHERE id = $1 AND user_id = $2",
+        document_id, current_user["id"]
     )
     
     if not row:
@@ -204,28 +211,30 @@ async def get_document(
     
     return DocumentResponse(
         id=row['id'],
-        name=row['original_name'],
-        mime_type=row['content_type'],
-        size=row['file_size'],
+        filename=row['filename'],
+        original_name=row['original_name'],
+        file_size=row['file_size'],
+        content_type=row['content_type'],
         status=row['status'],
-        chunk_count=0,  # Not stored in DB yet
+        error_message=row.get('error_message'),
         created_at=row['created_at'],
-        processed_at=row['updated_at']
+        updated_at=row['updated_at']
     )
 
 
 @router.delete("/{document_id}")
 async def delete_document(
     document_id: UUID,
+    current_user: dict = Depends(get_current_active_user),
     db: asyncpg.Connection = Depends(get_db),
     vector_store: VectorStore = Depends(get_vector_store),
     document_processor: DocumentProcessor = Depends(get_document_processor)
 ):
     """Delete a document and all associated data."""
-    # Check if document exists
+    # Check if document exists and belongs to user
     row = await db.fetchrow(
-        "SELECT id, s3_key FROM documents WHERE id = $1",
-        document_id
+        "SELECT id, s3_key FROM documents WHERE id = $1 AND user_id = $2",
+        document_id, current_user["id"]
     )
     
     if not row:
@@ -258,14 +267,15 @@ async def delete_document(
 @router.get("/{document_id}/download")
 async def download_document(
     document_id: UUID,
+    current_user: dict = Depends(get_current_active_user),
     db: asyncpg.Connection = Depends(get_db),
     document_processor: DocumentProcessor = Depends(get_document_processor)
 ):
     """Download the processed (redacted) document."""
-    # Get document info
+    # Get document info - ensure user owns it
     row = await db.fetchrow(
-        "SELECT name, s3_key, mime_type FROM documents WHERE id = $1",
-        document_id
+        "SELECT original_name, s3_key, content_type FROM documents WHERE id = $1 AND user_id = $2",
+        document_id, current_user["id"]
     )
     
     if not row:
