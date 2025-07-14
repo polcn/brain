@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     s3_endpoint_url: Optional[str] = None  # For MinIO/LocalStack
     use_local_storage: bool = False  # Flag for local development
     
+    # MinIO credentials (separate from AWS)
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    
     # Bedrock
     bedrock_model_id: str = "anthropic.claude-instant-v1"
     bedrock_embedding_model: str = "amazon.titan-embed-text-v1"

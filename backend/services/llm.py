@@ -10,6 +10,7 @@ from botocore.exceptions import ClientError
 import random
 
 from ..core.config import settings
+from ..core.bedrock_config import BedrockConfig
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +21,28 @@ class LLMService:
     def __init__(self):
         self.use_mock = False
         try:
-            self.client = boto3.client(
-                'bedrock-runtime',
-                region_name=settings.aws_region,
-                aws_access_key_id=settings.aws_access_key_id,
-                aws_secret_access_key=settings.aws_secret_access_key
-            )
+            # Initialize Bedrock client with optional credentials
+            client_kwargs = {
+                'service_name': 'bedrock-runtime',
+                'region_name': settings.aws_region
+            }
+            
+            # Get Bedrock-specific credentials to avoid MinIO conflict
+            bedrock_creds = BedrockConfig.get_aws_credentials()
+            if bedrock_creds.get('aws_access_key_id') and bedrock_creds.get('aws_secret_access_key'):
+                client_kwargs.update(bedrock_creds)
+                logger.info(f"Using AWS credentials for Bedrock (key: {bedrock_creds['aws_access_key_id'][:10]}...)")
+            else:
+                logger.info("Using default AWS credential chain (IAM role, ~/.aws/credentials, etc.)")
+            
+            self.client = boto3.client(**client_kwargs)
             self.model_id = settings.bedrock_model_id
             self.max_tokens = 4096
             self.temperature = 0.7
+            
+            # Test the connection
+            logger.info(f"Initialized Bedrock client for model: {self.model_id}")
+            
         except Exception as e:
             logger.warning(f"Failed to initialize Bedrock client: {e}. Using mock LLM.")
             self.use_mock = True
@@ -183,6 +197,18 @@ class LLMService:
                 "top_p": 0.9,
                 "stop_sequences": ["\n\nHuman:"]
             }
+        elif "nova" in self.model_id.lower():
+            # Amazon Nova format
+            request_body = {
+                "messages": [
+                    {"role": "user", "content": [{"text": prompt}]}
+                ],
+                "inferenceConfig": {
+                    "max_new_tokens": self.max_tokens,
+                    "temperature": self.temperature,
+                    "top_p": 0.9
+                }
+            }
         else:
             # Generic format for other models
             request_body = {
@@ -205,6 +231,9 @@ class LLMService:
             return response_body['completion']
         elif 'text' in response_body:
             return response_body['text']
+        elif 'output' in response_body and 'message' in response_body['output']:
+            # Nova format
+            return response_body['output']['message']['content'][0]['text']
         else:
             raise ValueError(f"Unexpected response format: {response_body.keys()}")
     

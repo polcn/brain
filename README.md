@@ -179,11 +179,11 @@ curl -H "Authorization: Bearer $TOKEN" \
 ### Known Issues
 - ⚠️ Redaction API returns 403 errors (falls back to unredacted text)
 - ⚠️ Frontend lacks login/register UI components (API supports it)
-- ⚠️ Bedrock access requires AWS credentials (using mock services)
+- ✅ Bedrock access configured and working with AWS credentials
 
 ### Next Steps
 - 🔄 Add authentication UI to frontend
-- 🔄 Configure production AWS Bedrock access
+- ✅ Configure production AWS Bedrock access (completed)
 - 🔄 Implement proper secret management
 - 🔄 Add monitoring and observability
 

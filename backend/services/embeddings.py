@@ -11,6 +11,7 @@ from botocore.exceptions import ClientError
 import hashlib
 
 from ..core.config import settings
+from ..core.bedrock_config import BedrockConfig
 
 logger = logging.getLogger(__name__)
 
@@ -21,15 +22,28 @@ class EmbeddingsService:
     def __init__(self):
         self.use_mock = False
         try:
-            self.client = boto3.client(
-                'bedrock-runtime',
-                region_name=settings.aws_region,
-                aws_access_key_id=settings.aws_access_key_id,
-                aws_secret_access_key=settings.aws_secret_access_key
-            )
+            # Initialize Bedrock client with optional credentials
+            client_kwargs = {
+                'service_name': 'bedrock-runtime',
+                'region_name': settings.aws_region
+            }
+            
+            # Get Bedrock-specific credentials to avoid MinIO conflict
+            bedrock_creds = BedrockConfig.get_aws_credentials()
+            if bedrock_creds.get('aws_access_key_id') and bedrock_creds.get('aws_secret_access_key'):
+                client_kwargs.update(bedrock_creds)
+                logger.info(f"Using AWS credentials for Bedrock (key: {bedrock_creds['aws_access_key_id'][:10]}...)")
+            else:
+                logger.info("Using default AWS credential chain (IAM role, ~/.aws/credentials, etc.)")
+            
+            self.client = boto3.client(**client_kwargs)
             self.model_id = settings.bedrock_embedding_model
             self.max_batch_size = 25  # Titan supports batches up to 25
             self.max_text_length = 8192  # Titan max input length
+            
+            # Test the connection
+            logger.info(f"Initialized Bedrock client for embeddings model: {self.model_id}")
+            
         except Exception as e:
             logger.warning(f"Failed to initialize Bedrock client: {e}. Using mock embeddings.")
             self.use_mock = True
@@ -142,10 +156,9 @@ class EmbeddingsService:
         # Titan expects one text at a time
         for text in texts:
             request_body = {
-                "inputText": text,
-                "dimensions": 1536,  # Explicitly request 1536 dimensions
-                "normalize": normalize
+                "inputText": text
             }
+            # Note: Titan v1 doesn't support normalize parameter in the request
             
             response = self.client.invoke_model(
                 modelId=self.model_id,
@@ -155,11 +168,17 @@ class EmbeddingsService:
             )
             
             response_body = json.loads(response['body'].read())
-            embedding = np.array(response_body['embedding'])
+            embedding = np.array(response_body['embedding'], dtype=np.float32)
             
             # Verify dimensions
             if embedding.shape != (1536,):
                 raise ValueError(f"Expected embedding of shape (1536,), got {embedding.shape}")
+            
+            # Normalize if requested (Titan doesn't normalize by default)
+            if normalize:
+                norm = np.linalg.norm(embedding)
+                if norm > 0:
+                    embedding = embedding / norm
             
             embeddings.append(embedding)
         

@@ -47,14 +47,15 @@ class DocumentProcessor:
         if settings.s3_endpoint_url:
             # Use MinIO credentials for local development
             s3_config['endpoint_url'] = settings.s3_endpoint_url
-            s3_config['aws_access_key_id'] = 'minioadmin'
-            s3_config['aws_secret_access_key'] = 'minioadmin'
+            s3_config['aws_access_key_id'] = settings.minio_access_key
+            s3_config['aws_secret_access_key'] = settings.minio_secret_key
             s3_config['use_ssl'] = False  # MinIO usually runs without SSL locally
             s3_config['verify'] = False
         else:
             # Use AWS credentials for production
-            s3_config['aws_access_key_id'] = settings.aws_access_key_id
-            s3_config['aws_secret_access_key'] = settings.aws_secret_access_key
+            if settings.aws_access_key_id and settings.aws_secret_access_key:
+                s3_config['aws_access_key_id'] = settings.aws_access_key_id
+                s3_config['aws_secret_access_key'] = settings.aws_secret_access_key
         
         self.s3_client = boto3.client('s3', **s3_config)
         self.chunk_size = 1000  # characters

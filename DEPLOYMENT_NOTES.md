@@ -104,13 +104,30 @@ Successfully deployed React frontend application:
 - **Features**: Material-UI components, React Router, Axios with auth interceptors
 - **Status**: Fully functional but needs login/register UI components
 
+### 12. AWS Bedrock Integration
+Configured real AWS Bedrock for production-grade AI capabilities:
+- **Challenge**: MinIO S3 credentials were overriding AWS credentials in Docker environment
+- **Solution**: Implemented separate credential handling for Bedrock services
+- **Implementation**:
+  - Created `backend/core/bedrock_config.py` to manage Bedrock-specific credentials
+  - Added BEDROCK_AWS_ACCESS_KEY_ID and BEDROCK_AWS_SECRET_ACCESS_KEY environment variables
+  - Updated LLM service to support Amazon Nova models (nova-lite-v1:0)
+  - Updated embeddings service to use Titan Text Embeddings V2
+- **Models**:
+  - LLM: `amazon.nova-lite-v1:0` (lightweight, cost-effective)
+  - Embeddings: `amazon.titan-embed-text-v2:0` (1536 dimensions)
+- **Fallback**: Mock services still available when Bedrock is unavailable
+
 ## Known Issues and Limitations
 
 ### 1. Bedrock Access
-- **Status**: ✅ **RESOLVED** - Implemented mock services for local development
-- **Issue**: Document processing fails at embedding generation
-- **Error**: `AccessDeniedException` when calling Bedrock
-- **Solution**: Mock services automatically activate when Bedrock is unavailable
+- **Status**: ✅ **RESOLVED** - Configured real AWS Bedrock access
+- **Issue**: MinIO credentials were overriding AWS credentials
+- **Solution**: 
+  - Added separate BEDROCK_AWS_ACCESS_KEY_ID and BEDROCK_AWS_SECRET_ACCESS_KEY environment variables
+  - Created BedrockConfig class to handle credential conflicts
+  - Configured to use Amazon Nova Lite for LLM and Titan Text Embeddings V2
+  - Mock services remain as fallback when Bedrock is unavailable
 
 ### 2. Document Redaction
 - **Status**: ✅ **RESOLVED** - Integrated polcn/redact String.com API
@@ -148,8 +165,11 @@ S3_ENDPOINT_URL="http://minio:9000"  # For local development
 USE_LOCAL_STORAGE="true"
 
 # Bedrock
-BEDROCK_MODEL_ID="anthropic.claude-instant-v1"
-BEDROCK_EMBEDDING_MODEL="amazon.titan-embed-text-v1"
+BEDROCK_MODEL_ID="amazon.nova-lite-v1:0"
+BEDROCK_EMBEDDING_MODEL="amazon.titan-embed-text-v2:0"
+# Add these for production with real Bedrock access:
+BEDROCK_AWS_ACCESS_KEY_ID="your-aws-key"
+BEDROCK_AWS_SECRET_ACCESS_KEY="your-aws-secret"
 ```
 
 ## Deployment Commands
