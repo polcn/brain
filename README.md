@@ -20,17 +20,17 @@ Brain is a document-based AI assistant that combines document redaction, vector 
 git clone https://github.com/polcn/brain.git
 cd brain
 
-# Copy environment variables
-cp .env.example .env
-# Edit .env with your AWS credentials for Bedrock
-
-# Start all services
-make init  # First time setup
-make up    # Start backend services
-
-# Or start full stack with frontend
-make full  # Start all services including frontend
+# Run the automated setup script
+./setup.sh
 ```
+
+The setup script will guide you through:
+- Installing Docker Compose if needed
+- Creating your configuration
+- Starting the services
+- Providing access URLs
+
+For manual setup or more options, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 Access the services at:
 - Frontend: http://localhost:3001 (when using `make full`)
