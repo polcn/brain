@@ -127,25 +127,22 @@ services:
     networks:
       - brain-network
 
-  # Frontend (placeholder for React app)
+  # Frontend React app
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: brain-frontend
-    environment:
-      REACT_APP_API_URL: http://localhost:8001
     ports:
-      - "3001:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "3001:3001"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - brain-network
     profiles:
       - frontend
+      - full
 
   # pgAdmin for database management (optional)
   pgadmin:

@@ -141,3 +141,29 @@ restart:
 rebuild: down build up
 
 fresh: clean init
+
+# Frontend operations
+frontend-up:
+	docker-compose --profile frontend up -d frontend
+
+frontend-down:
+	docker-compose --profile frontend stop frontend
+
+frontend-logs:
+	docker-compose --profile frontend logs -f frontend
+
+frontend-shell:
+	docker-compose --profile frontend exec frontend sh
+
+frontend-dev:
+	cd frontend && npm install && npm run dev
+
+frontend-build:
+	cd frontend && npm install && npm run build
+
+# Full stack with frontend
+full:
+	docker-compose --profile full up -d
+	@echo "Full stack started!"
+	@echo "Frontend: http://localhost:3001"
+	@echo "Backend API: http://localhost:8001"

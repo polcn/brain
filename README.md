@@ -26,10 +26,14 @@ cp .env.example .env
 
 # Start all services
 make init  # First time setup
-make up    # Start services
+make up    # Start backend services
+
+# Or start full stack with frontend
+make full  # Start all services including frontend
 ```
 
 Access the services at:
+- Frontend: http://localhost:3001 (when using `make full`)
 - API: http://localhost:8001
 - API Docs: http://localhost:8001/docs
 - MinIO Console: http://localhost:9001 (minioadmin/minioadmin)
@@ -124,9 +128,9 @@ curl http://localhost:8001/api/v1/documents
 - ✅ S3 storage integration
 - ✅ Unit and integration tests
 - ✅ Docker Compose setup
+- ✅ Frontend React application
 
 ### In Progress
-- 🔄 Frontend React application
 - 🔄 JWT Authentication implementation
 - 🔄 Production deployment setup
 
