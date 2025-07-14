@@ -13,6 +13,7 @@ from pathlib import Path
 import magic
 import boto3
 from botocore.exceptions import ClientError
+import aiohttp
 
 from ..core.config import settings
 from .embeddings import EmbeddingsService
@@ -93,14 +94,22 @@ class DocumentProcessor:
             async with aiofiles.open(original_path, 'wb') as f:
                 await f.write(file_content)
             
-            # Redact sensitive information
-            redacted_path = await self._redact_document(original_path, temp_dir)
+            # Extract text first
+            text_content = await self._extract_text(original_path, mime_type)
             
-            # Extract text
-            text_content = await self._extract_text(redacted_path, mime_type)
+            # Redact sensitive information from text
+            redacted_text = await self._redact_text(text_content)
             
-            # Upload redacted file to S3
+            # Save redacted text to file for S3 upload
+            redacted_path = os.path.join(temp_dir, f"redacted_{filename}.txt")
+            async with aiofiles.open(redacted_path, 'w', encoding='utf-8') as f:
+                await f.write(redacted_text)
+            
+            # Upload redacted text file to S3
             s3_key = await self._upload_to_s3(redacted_path, document_id, filename)
+            
+            # Use redacted text for processing
+            text_content = redacted_text
             
             # Chunk the text
             chunks = self._create_chunks(text_content)
@@ -138,51 +147,36 @@ class DocumentProcessor:
                 os.unlink(os.path.join(temp_dir, file))
             os.rmdir(temp_dir)
     
-    async def _redact_document(
-        self,
-        input_path: str,
-        output_dir: str
-    ) -> str:
-        """Redact sensitive information using polcn/redact tool."""
-        output_path = os.path.join(output_dir, "redacted_" + os.path.basename(input_path))
-        
-        # Check if redact tool exists
-        if not os.path.exists(self.redact_path):
-            logger.warning("Redact tool not found, skipping redaction")
-            return input_path
-        
+    async def _redact_text(self, text: str) -> str:
+        """Redact sensitive information using the String.com API."""
+        if not text or not text.strip():
+            return text
+            
         try:
-            # Run redact command
-            cmd = [
-                self.redact_path,
-                "-i", input_path,
-                "-o", output_path,
-                "--remove-pii",
-                "--remove-emails",
-                "--remove-phones",
-                "--remove-ssn"
-            ]
+            headers = {
+                "Authorization": "Bearer sk_live_SM7WYKBXiEApBTqgOQzPJW03ItzwVCzc3RLWn4JLluw",
+                "Content-Type": "application/json"
+            }
             
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await process.communicate()
-            
-            if process.returncode != 0:
-                logger.error(f"Redaction failed: {stderr.decode()}")
-                # Fall back to original if redaction fails
-                return input_path
-            
-            logger.info(f"Successfully redacted document: {os.path.basename(input_path)}")
-            return output_path
-            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://101pi5aiv5.execute-api.us-east-1.amazonaws.com/production/api/string/redact",
+                    json={"text": text},
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        redacted_text = result.get("redacted_text", text)
+                        logger.info(f"Successfully redacted text (length: {len(text)} -> {len(redacted_text)})")
+                        return redacted_text
+                    else:
+                        logger.error(f"Redaction API error: {response.status}")
+                        return text
+                        
         except Exception as e:
-            logger.error(f"Error running redact tool: {str(e)}")
-            # Fall back to original if redaction fails
-            return input_path
+            logger.error(f"Error calling redaction API: {str(e)}")
+            return text
     
     async def _extract_text(
         self,

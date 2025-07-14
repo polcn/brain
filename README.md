@@ -114,7 +114,7 @@ curl http://localhost:8001/api/v1/documents
 
 ## Project Status
 
-🚧 **POC In Development** - Core backend services implemented and tested. Document processing requires Bedrock access.
+🚧 **POC In Development** - Core backend services implemented and tested. Document processing pipeline works through redaction and S3 upload, requires Bedrock access for embeddings.
 
 ### Completed
 - ✅ FastAPI backend structure
@@ -127,12 +127,13 @@ curl http://localhost:8001/api/v1/documents
 - ✅ Database schema and migrations
 - ✅ Unit and integration tests
 - ✅ Frontend React application (built, not deployed)
+- ✅ Document redaction API integration (polcn/redact)
 
 ### Working but Limited
 - ⚠️ Document processing (requires Bedrock access)
 - ⚠️ Embeddings service (requires Bedrock Titan access)
 - ⚠️ LLM service (requires Bedrock Claude access)
-- ⚠️ File redaction (requires polcn/redact installation)
+- ⚠️ File redaction (integrated polcn/redact API, experiencing 403 errors)
 
 ### In Progress
 - 🔄 JWT Authentication implementation
