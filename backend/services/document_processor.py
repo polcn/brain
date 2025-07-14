@@ -41,14 +41,19 @@ class DocumentProcessor:
         # Create S3 client with optional endpoint URL for MinIO/LocalStack
         s3_config = {
             'region_name': settings.aws_region,
-            'aws_access_key_id': settings.aws_access_key_id,
-            'aws_secret_access_key': settings.aws_secret_access_key
         }
         
         if settings.s3_endpoint_url:
+            # Use MinIO credentials for local development
             s3_config['endpoint_url'] = settings.s3_endpoint_url
+            s3_config['aws_access_key_id'] = 'minioadmin'
+            s3_config['aws_secret_access_key'] = 'minioadmin'
             s3_config['use_ssl'] = False  # MinIO usually runs without SSL locally
             s3_config['verify'] = False
+        else:
+            # Use AWS credentials for production
+            s3_config['aws_access_key_id'] = settings.aws_access_key_id
+            s3_config['aws_secret_access_key'] = settings.aws_secret_access_key
         
         self.s3_client = boto3.client('s3', **s3_config)
         self.chunk_size = 1000  # characters
@@ -287,18 +292,17 @@ class DocumentProcessor:
             
             await asyncio.get_event_loop().run_in_executor(
                 None,
-                self.s3_client.put_object,
-                settings.s3_bucket_name,
-                s3_key,
-                file_content,
-                {
-                    'ContentType': magic.from_file(file_path, mime=True),
-                    'Metadata': {
+                lambda: self.s3_client.put_object(
+                    Bucket=settings.s3_bucket_name,
+                    Key=s3_key,
+                    Body=file_content,
+                    ContentType=magic.from_file(file_path, mime=True),
+                    Metadata={
                         'document_id': str(document_id),
                         'original_filename': original_filename,
                         'redacted': 'true'
                     }
-                }
+                )
             )
             
             logger.info(f"Uploaded document to S3: {s3_key}")

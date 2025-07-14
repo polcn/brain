@@ -25,6 +25,7 @@ FROM python:3.9-slim
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     curl \
+    libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -34,7 +35,7 @@ RUN useradd -m -u 1000 brain
 WORKDIR /app
 
 # Copy Python dependencies from builder
-COPY --from=builder /root/.local /home/brain/.local
+COPY --from=builder --chown=brain:brain /root/.local /home/brain/.local
 
 # Copy application code
 COPY --chown=brain:brain . /app

@@ -62,10 +62,11 @@ async def upload_document(
         # Insert document record
         await db.execute(
             """
-            INSERT INTO documents (id, name, mime_type, size, status)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO documents (id, filename, original_name, content_type, file_size, status)
+            VALUES ($1, $2, $3, $4, $5, $6)
             """,
             document_id,
+            file.filename,
             file.filename,
             file.content_type,
             len(content),
@@ -87,14 +88,12 @@ async def upload_document(
             UPDATE documents 
             SET status = $1, 
                 s3_key = $2,
-                processed_at = $3,
-                chunk_count = $4
-            WHERE id = $5
+                updated_at = $3
+            WHERE id = $4
             """,
             result['status'],
             result['s3_key'],
             datetime.utcnow(),
-            result['chunk_count'],
             document_id
         )
         
@@ -106,13 +105,13 @@ async def upload_document(
         
         return DocumentResponse(
             id=row['id'],
-            name=row['name'],
-            mime_type=row['mime_type'],
-            size=row['size'],
+            name=row['original_name'],
+            mime_type=row['content_type'],
+            size=row['file_size'],
             status=row['status'],
-            chunk_count=row['chunk_count'],
+            chunk_count=0,  # We don't have this in DB yet
             created_at=row['created_at'],
-            processed_at=row['processed_at']
+            processed_at=row['updated_at']
         )
         
     except Exception as e:
@@ -170,13 +169,13 @@ async def list_documents(
     documents = [
         DocumentResponse(
             id=row['id'],
-            name=row['name'],
-            mime_type=row['mime_type'],
-            size=row['size'],
+            name=row['original_name'],
+            mime_type=row['content_type'],
+            size=row['file_size'],
             status=row['status'],
-            chunk_count=row['chunk_count'],
+            chunk_count=0,  # Not stored in DB yet
             created_at=row['created_at'],
-            processed_at=row['processed_at']
+            processed_at=row['updated_at']
         )
         for row in rows
     ]
@@ -205,13 +204,13 @@ async def get_document(
     
     return DocumentResponse(
         id=row['id'],
-        name=row['name'],
-        mime_type=row['mime_type'],
-        size=row['size'],
+        name=row['original_name'],
+        mime_type=row['content_type'],
+        size=row['file_size'],
         status=row['status'],
-        chunk_count=row['chunk_count'],
+        chunk_count=0,  # Not stored in DB yet
         created_at=row['created_at'],
-        processed_at=row['processed_at']
+        processed_at=row['updated_at']
     )
 
 
@@ -285,9 +284,9 @@ async def download_document(
         # Return as streaming response
         return StreamingResponse(
             content=content,
-            media_type=row['mime_type'],
+            media_type=row['content_type'],
             headers={
-                "Content-Disposition": f"attachment; filename={row['name']}"
+                "Content-Disposition": f"attachment; filename={row['original_name']}"
             }
         )
         

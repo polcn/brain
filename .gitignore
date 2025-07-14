@@ -216,6 +216,7 @@ processed_documents/
 !requirements.txt
 !requirements-dev.txt
 !test_documents/
+test_document.txt
 
 # Secrets and credentials
 *.pem

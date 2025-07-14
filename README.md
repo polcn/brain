@@ -32,6 +32,8 @@ The setup script will guide you through:
 
 For manual setup or more options, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
+**Important**: See [DEPLOYMENT_NOTES.md](DEPLOYMENT_NOTES.md) for critical fixes and known issues from initial deployment.
+
 Access the services at:
 - Frontend: http://localhost:3001 (when using `make full`)
 - API: http://localhost:8001
@@ -112,27 +114,30 @@ curl http://localhost:8001/api/v1/documents
 
 ## Project Status
 
-🚧 **POC In Development** - Core backend services implemented, testing and deployment setup in progress.
+🚧 **POC In Development** - Core backend services implemented and tested. Document processing requires Bedrock access.
 
 ### Completed
 - ✅ FastAPI backend structure
 - ✅ Database models (PostgreSQL + pgvector)
-- ✅ API endpoints (v1 fully functional)
-- ✅ Alembic migration setup
-- ✅ Development environment
+- ✅ API endpoints (health, documents list/upload/download)
+- ✅ Development environment with Docker Compose
 - ✅ Vector store service (pgvector integration)
-- ✅ Embeddings service (Bedrock Titan)
-- ✅ LLM service (Bedrock Claude)
-- ✅ Document processing pipeline
-- ✅ File redaction integration
-- ✅ S3 storage integration
+- ✅ MinIO integration for local S3-compatible storage
+- ✅ Document upload and storage pipeline
+- ✅ Database schema and migrations
 - ✅ Unit and integration tests
-- ✅ Docker Compose setup
-- ✅ Frontend React application
+- ✅ Frontend React application (built, not deployed)
+
+### Working but Limited
+- ⚠️ Document processing (requires Bedrock access)
+- ⚠️ Embeddings service (requires Bedrock Titan access)
+- ⚠️ LLM service (requires Bedrock Claude access)
+- ⚠️ File redaction (requires polcn/redact installation)
 
 ### In Progress
 - 🔄 JWT Authentication implementation
-- 🔄 Production deployment setup
+- 🔄 Mock services for local development
+- 🔄 Production deployment configuration
 
 ## Architecture
 
