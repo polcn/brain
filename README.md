@@ -215,8 +215,8 @@ Key environment variables (see `.env.example`):
 - `AWS_ACCESS_KEY_ID`: AWS credentials for S3 and Bedrock
 - `AWS_SECRET_ACCESS_KEY`: AWS secret key
 - `S3_BUCKET_NAME`: Bucket for storing redacted documents
-- `BEDROCK_MODEL_ID`: LLM model (default: anthropic.claude-instant-v1)
-- `BEDROCK_EMBEDDING_MODEL`: Embedding model (default: amazon.titan-embed-text-v1)
+- `BEDROCK_MODEL_ID`: LLM model (default: amazon.nova-lite-v1:0)
+- `BEDROCK_EMBEDDING_MODEL`: Embedding model (default: amazon.titan-embed-text-v2:0)
 
 ## Development
 
