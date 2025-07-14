@@ -78,7 +78,7 @@ class VectorStore:
                     # Insert chunk with embedding
                     chunk_id = await conn.fetchval(
                         """
-                        INSERT INTO chunks (document_id, chunk_index, content, embedding, metadata)
+                        INSERT INTO chunks (document_id, chunk_index, content, embedding, chunk_metadata)
                         VALUES ($1, $2, $3, $4, $5)
                         RETURNING id
                         """,
@@ -125,7 +125,7 @@ class VectorStore:
                 c.id,
                 c.content,
                 1 - (c.embedding <=> $1) as similarity,
-                c.metadata,
+                c.chunk_metadata,
                 c.document_id
             FROM chunks c
             WHERE 1=1
@@ -160,7 +160,7 @@ class VectorStore:
                     row['content'],
                     row['similarity'],
                     {
-                        **(row['metadata'] or {}),
+                        **(row['chunk_metadata'] or {}),
                         'document_id': str(row['document_id'])
                     }
                 ))
@@ -185,7 +185,7 @@ class VectorStore:
             rows = await conn.fetch(
                 """
                 SELECT 
-                    id, chunk_index, content, metadata, created_at
+                    id, chunk_index, content, chunk_metadata, created_at
                 FROM chunks
                 WHERE document_id = $1
                 ORDER BY chunk_index
@@ -229,7 +229,7 @@ class VectorStore:
             await conn.execute(
                 """
                 UPDATE chunks 
-                SET metadata = COALESCE(metadata, '{}'::jsonb) || $2
+                SET chunk_metadata = COALESCE(chunk_metadata, '{}'::jsonb) || $2
                 WHERE id = $1
                 """,
                 chunk_id,

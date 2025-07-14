@@ -6,6 +6,27 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 from pydantic import BaseModel
+from enum import Enum
+
+
+class DocumentStatus(str, Enum):
+    pending = "pending"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"
+
+
+class DocumentProcessingStatus(BaseModel):
+    status: DocumentStatus
+    progress: Optional[float] = None
+    message: Optional[str] = None
+
+
+class DocumentUploadResponse(BaseModel):
+    id: UUID
+    filename: str
+    status: DocumentStatus
+    message: str
 
 
 class DocumentResponse(BaseModel):

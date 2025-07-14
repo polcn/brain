@@ -74,17 +74,17 @@ function DocumentsPage() {
     }
   }
 
-  const handleDownload = async (document: Document) => {
+  const handleDownload = async (doc: Document) => {
     try {
-      const blob = await documentsApi.download(document.id)
+      const blob = await documentsApi.download(doc.id)
       const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
+      const a = window.document.createElement('a')
       a.href = url
-      a.download = document.filename
-      document.body.appendChild(a)
+      a.download = doc.filename
+      window.document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      window.document.body.removeChild(a)
     } catch (error) {
       console.error('Download failed:', error)
     }

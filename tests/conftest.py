@@ -16,10 +16,10 @@ from httpx import AsyncClient
 from backend.app import app
 from backend.core.config import settings
 from backend.core.database import get_db_pool
-from backend.services.vector_store import VectorStoreService
+from backend.services.vector_store import VectorStore
 from backend.services.embeddings import EmbeddingsService
 from backend.services.llm import LLMService
-from backend.services.document_processor import DocumentProcessorService
+from backend.services.document_processor import DocumentProcessor
 
 
 @pytest.fixture(scope="session")

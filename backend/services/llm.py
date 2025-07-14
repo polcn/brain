@@ -4,7 +4,7 @@ LLM service for chat and question answering using Amazon Bedrock.
 import asyncio
 import json
 import logging
-from typing import List, Dict, Any, Optional, AsyncGenerator
+from typing import List, Dict, Any, Optional, AsyncGenerator, Union
 import boto3
 from botocore.exceptions import ClientError
 
@@ -33,7 +33,7 @@ class LLMService:
         context_chunks: List[Dict[str, Any]],
         chat_history: Optional[List[Dict[str, str]]] = None,
         stream: bool = False
-    ) -> AsyncGenerator[str, None] | str:
+    ) -> Union[AsyncGenerator[str, None], str]:
         """
         Generate a response to the query using provided context.
         

@@ -19,7 +19,7 @@ class Chunk(Base):
     chunk_index = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     embedding = Column(Vector(1536))  # Titan embeddings are 1536 dimensions
-    metadata = Column(JSONB)
+    chunk_metadata = Column(JSONB)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     
     __table_args__ = (

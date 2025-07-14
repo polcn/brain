@@ -253,4 +253,4 @@ docs/api/
 
 # Virtual environment names
 brain-env/
-brain-venv/
+brain-venv/test_venv/
