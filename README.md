@@ -37,11 +37,11 @@ For manual setup or more options, see [DEPLOYMENT.md](DEPLOYMENT.md).
 **Important**: See [DEPLOYMENT_NOTES.md](DEPLOYMENT_NOTES.md) for critical fixes and known issues from initial deployment.
 
 Access the services at:
-- Frontend: http://localhost:3001 (when using `make full`)
-- API: http://localhost:8001
-- API Docs: http://localhost:8001/docs
-- MinIO Console: http://localhost:9001 (minioadmin/minioadmin)
-- pgAdmin: http://localhost:5050 (admin@brain.local/admin)
+- **Frontend**: http://localhost:3001
+- **API**: http://localhost:8001
+- **API Docs**: http://localhost:8001/docs
+- **MinIO Console**: http://localhost:9001 (minioadmin/minioadmin)
+- **pgAdmin**: http://localhost:5050 (admin@brain.local/admin) - optional, use `--profile full`
 
 ### Manual Installation
 
@@ -147,38 +147,45 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ## Project Status
 
-🎉 **POC Functional** - Full document processing pipeline and chat functionality working with mock services. Ready for local development and demo.
+🎉 **POC Fully Deployed** - Complete document processing pipeline, chat functionality, and React frontend all working with mock services. Ready for development and demo.
 
 ### Completed
-- ✅ FastAPI backend structure
-- ✅ Database models (PostgreSQL + pgvector)
-- ✅ API endpoints (health, documents list/upload/download, chat)
-- ✅ Development environment with Docker Compose
-- ✅ Vector store service (pgvector integration)
-- ✅ MinIO integration for local S3-compatible storage
-- ✅ Document upload and storage pipeline
-- ✅ Database schema and migrations
-- ✅ Unit and integration tests
-- ✅ Frontend React application (built, not deployed)
-- ✅ Document redaction API integration (polcn/redact)
-- ✅ Mock services for embeddings and LLM (automatic fallback)
-- ✅ Full document processing pipeline with mock services
-- ✅ Chat/Q&A functionality with mock responses
+- ✅ FastAPI backend structure with full REST API
+- ✅ PostgreSQL database with pgvector for similarity search
 - ✅ JWT authentication with user management
 - ✅ Multi-tenant document isolation
-- ✅ Admin user management endpoints
+- ✅ React frontend application (Material-UI)
+- ✅ Docker Compose development environment
+- ✅ MinIO for S3-compatible local storage
+- ✅ Document upload and processing pipeline
+- ✅ Text extraction from PDF/DOCX/TXT files
+- ✅ Document redaction integration (polcn/redact)
+- ✅ Mock services for embeddings and LLM
+- ✅ Vector similarity search
+- ✅ Chat/Q&A with source attribution
+- ✅ Health monitoring endpoints
+- ✅ Comprehensive test suite
+- ✅ API documentation (OpenAPI/Swagger)
+- ✅ nginx reverse proxy for frontend
 
-### Working with Mock Services
-- ✅ Document processing (works with mock embeddings)
-- ✅ Embeddings service (automatic fallback to mock when Bedrock unavailable)
-- ✅ LLM service (mock responses with document references)
-- ✅ Vector search (works with mock embeddings)
-- ⚠️ File redaction (integrated polcn/redact API, experiencing 403 errors but has fallback)
+### Current Architecture
+- **Frontend**: React + TypeScript + Material-UI on port 3001
+- **Backend**: FastAPI + asyncpg on port 8001
+- **Database**: PostgreSQL with pgvector on port 5433
+- **Cache**: Redis on port 6379
+- **Storage**: MinIO (S3-compatible) on ports 9000/9001
+- **Auth**: JWT tokens with 30-minute expiration
 
-### In Progress
-- 🔄 Frontend deployment and testing
-- 🔄 Production deployment configuration
-- 🔄 Database migration strategy improvements
+### Known Issues
+- ⚠️ Redaction API returns 403 errors (falls back to unredacted text)
+- ⚠️ Frontend lacks login/register UI components (API supports it)
+- ⚠️ Bedrock access requires AWS credentials (using mock services)
+
+### Next Steps
+- 🔄 Add authentication UI to frontend
+- 🔄 Configure production AWS Bedrock access
+- 🔄 Implement proper secret management
+- 🔄 Add monitoring and observability
 
 ## Architecture
 

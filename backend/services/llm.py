@@ -66,6 +66,7 @@ class LLMService:
         try:
             if stream:
                 logger.info("Generating streaming response")
+                # For streaming, we return the generator itself (not await it)
                 return self._stream_response(prompt)
             else:
                 logger.info("Generating complete response")
@@ -166,6 +167,13 @@ class LLMService:
     
     def _call_bedrock(self, prompt: str, stream: bool = False):
         """Make synchronous call to Bedrock API."""
+        if stream:
+            return self._call_bedrock_stream(prompt)
+        else:
+            return self._call_bedrock_complete(prompt)
+    
+    def _call_bedrock_complete(self, prompt: str) -> str:
+        """Make non-streaming call to Bedrock API."""
         # Prepare request based on model type
         if "claude" in self.model_id.lower():
             request_body = {
@@ -183,38 +191,56 @@ class LLMService:
                 "temperature": self.temperature
             }
         
-        if stream:
-            response = self.client.invoke_model_with_response_stream(
-                modelId=self.model_id,
-                contentType='application/json',
-                accept='application/json',
-                body=json.dumps(request_body)
-            )
-            
-            # Process streaming response
-            for event in response['body']:
-                chunk = json.loads(event['chunk']['bytes'])
-                if 'completion' in chunk:
-                    yield chunk['completion']
-                elif 'text' in chunk:
-                    yield chunk['text']
+        response = self.client.invoke_model(
+            modelId=self.model_id,
+            contentType='application/json',
+            accept='application/json',
+            body=json.dumps(request_body)
+        )
+        
+        response_body = json.loads(response['body'].read())
+        
+        # Extract text based on model response format
+        if 'completion' in response_body:
+            return response_body['completion']
+        elif 'text' in response_body:
+            return response_body['text']
         else:
-            response = self.client.invoke_model(
-                modelId=self.model_id,
-                contentType='application/json',
-                accept='application/json',
-                body=json.dumps(request_body)
-            )
-            
-            response_body = json.loads(response['body'].read())
-            
-            # Extract text based on model response format
-            if 'completion' in response_body:
-                return response_body['completion']
-            elif 'text' in response_body:
-                return response_body['text']
-            else:
-                raise ValueError(f"Unexpected response format: {response_body.keys()}")
+            raise ValueError(f"Unexpected response format: {response_body.keys()}")
+    
+    def _call_bedrock_stream(self, prompt: str):
+        """Make streaming call to Bedrock API."""
+        # Prepare request based on model type
+        if "claude" in self.model_id.lower():
+            request_body = {
+                "prompt": f"\n\nHuman: {prompt}\n\nAssistant:",
+                "max_tokens_to_sample": self.max_tokens,
+                "temperature": self.temperature,
+                "top_p": 0.9,
+                "stop_sequences": ["\n\nHuman:"]
+            }
+        else:
+            # Generic format for other models
+            request_body = {
+                "prompt": prompt,
+                "max_tokens": self.max_tokens,
+                "temperature": self.temperature
+            }
+        
+        response = self.client.invoke_model_with_response_stream(
+            modelId=self.model_id,
+            contentType='application/json',
+            accept='application/json',
+            body=json.dumps(request_body)
+        )
+        
+        # Process streaming response
+        for event in response['body']:
+            chunk = json.loads(event['chunk']['bytes'])
+            if 'completion' in chunk:
+                yield chunk['completion']
+            elif 'text' in chunk:
+                yield chunk['text']
     
     async def _generate_mock_response(
         self,

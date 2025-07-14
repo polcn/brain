@@ -4,8 +4,14 @@ This document provides detailed information about the Brain Document AI API endp
 
 ## Base URL
 
+Direct API access:
 ```
 http://localhost:8001/api/v1
+```
+
+Through Frontend proxy:
+```
+http://localhost:3001/api/v1
 ```
 
 ## Authentication
