@@ -46,6 +46,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - S3 storage integration
 - **Dependency Injection** - Service management
 - **API v1 Implementation** - All endpoints functional
+- **Comprehensive Test Suite** - Unit and integration tests
+  - Service tests with mocking
+  - API endpoint tests
+  - Integration tests with database
+  - Test utilities and fixtures
+  - 80% coverage requirement
+- **Docker Compose Setup** - Complete local development environment
+  - Multi-service orchestration
+  - Development and production configurations
+  - MinIO for local S3
+  - pgAdmin for database management
+  - Makefile for easy commands
+- **Architecture Documentation** - draw.io diagrams
+  - Infrastructure architecture diagram
+  - Document processing flow diagram
 
 ### Changed
 - Switched from Pinecone to PostgreSQL + pgvector for vector storage
@@ -59,8 +74,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SQL injection prevention patterns
 - Document redaction before storage
 
-## [0.1.0] - TBD
+## [0.1.0] - 2025-01-14
 
-Initial POC release (planned)
+Initial POC release with core functionality:
+- Document upload and redaction
+- Vector storage with pgvector
+- Chat interface with source attribution
+- Docker development environment
+- Comprehensive test coverage
 
 [Unreleased]: https://github.com/polcn/brain/compare/v0.1.0...HEAD

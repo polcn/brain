@@ -13,14 +13,38 @@ Brain is a document-based AI assistant that combines document redaction, vector 
 
 ## Quick Start
 
-### Prerequisites
+### Docker Setup (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/polcn/brain.git
+cd brain
+
+# Copy environment variables
+cp .env.example .env
+# Edit .env with your AWS credentials for Bedrock
+
+# Start all services
+make init  # First time setup
+make up    # Start services
+```
+
+Access the services at:
+- API: http://localhost:8001
+- API Docs: http://localhost:8001/docs
+- MinIO Console: http://localhost:9001 (minioadmin/minioadmin)
+- pgAdmin: http://localhost:5050 (admin@brain.local/admin)
+
+### Manual Installation
+
+#### Prerequisites
 
 - Python 3.9+
 - PostgreSQL 15+ with pgvector extension
 - AWS Account (for S3 and Bedrock)
 - 8GB RAM minimum
 
-### Installation
+#### Installation Steps
 
 1. Clone the repository:
 ```bash
@@ -98,11 +122,13 @@ curl http://localhost:8001/api/v1/documents
 - ✅ Document processing pipeline
 - ✅ File redaction integration
 - ✅ S3 storage integration
+- ✅ Unit and integration tests
+- ✅ Docker Compose setup
 
 ### In Progress
-- 🔄 Unit and integration tests
-- 🔄 Docker Compose setup
 - 🔄 Frontend React application
+- 🔄 JWT Authentication implementation
+- 🔄 Production deployment setup
 
 ## Architecture
 
@@ -120,6 +146,10 @@ curl http://localhost:8001/api/v1/documents
               └──────────┘  └──────────┘
 ```
 
+For detailed architecture diagrams, see:
+- [Infrastructure Architecture](docs/architecture-diagram.drawio) - Full infrastructure layout
+- [Document Processing Flow](docs/document-flow-diagram.drawio) - Document pipeline details
+
 ## Configuration
 
 Key environment variables (see `.env.example`):
@@ -135,7 +165,17 @@ Key environment variables (see `.env.example`):
 
 ### Running Tests
 ```bash
-pytest tests/
+# Using Make
+make test         # Run all tests
+make test-cov     # Run with coverage report
+
+# Using Docker Compose
+docker-compose run --rm backend pytest
+
+# Using script
+./scripts/run_tests.sh         # All tests
+./scripts/run_tests.sh unit    # Unit tests only
+./scripts/run_tests.sh coverage # With coverage
 ```
 
 ### Code Formatting
@@ -162,19 +202,24 @@ alembic upgrade head
 
 ## Security
 
-- All documents are redacted before storage
-- JWT authentication for API access
+- All documents are redacted before storage using polcn/redact
 - Audit logging for all operations
 - No public S3 access
 - SQL injection prevention through parameterized queries
+- Environment-based configuration for secrets
+- Docker secrets support for production
+
+**Note**: JWT authentication is planned but not yet implemented. Currently using basic authentication.
 
 ## Limitations
 
 This is a POC with the following constraints:
-- Basic authentication only
+- Basic authentication only (JWT planned)
 - Single-tenant design
-- Limited to PDF and TXT files initially
+- Limited to PDF, TXT, and DOCX files
 - English language support only
+- No real-time collaboration features
+- Limited to 10MB file uploads
 
 ## Contributing
 
