@@ -42,13 +42,18 @@ class ChatCompletionChunk(BaseModel):
     choices: List[Dict[str, Any]]
 
 
+class DocumentSource(BaseModel):
+    document_id: str
+    document_name: str
+    chunk_id: str
+    similarity_score: float
+
 class ChatResponse(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
     
-    query: str
     answer: str
-    sources: List[ChatSource]
-    model_used: str
+    sources: List[DocumentSource]
+    context_used: bool
 
 
 class SearchResult(BaseModel):

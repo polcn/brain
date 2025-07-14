@@ -29,5 +29,5 @@ async def chat(
         logger.error("Chat query failed", error=str(e))
         raise HTTPException(
             status_code=500,
-            detail="Failed to process query"
+            detail=f"Failed to process chat request: {str(e)}"
         )

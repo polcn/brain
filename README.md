@@ -104,7 +104,7 @@ curl -X POST -F "file=@document.pdf" \
 ```bash
 curl -X POST -H "Content-Type: application/json" \
   -d '{"query":"What is the main topic of the documents?"}' \
-  http://localhost:8001/api/v1/chat
+  http://localhost:8001/api/v1/chat/
 ```
 
 ### List Documents
@@ -114,12 +114,12 @@ curl http://localhost:8001/api/v1/documents
 
 ## Project Status
 
-🚧 **POC In Development** - Core backend services implemented and tested. Document processing pipeline works through redaction and S3 upload, requires Bedrock access for embeddings.
+🎉 **POC Functional** - Full document processing pipeline and chat functionality working with mock services. Ready for local development and demo.
 
 ### Completed
 - ✅ FastAPI backend structure
 - ✅ Database models (PostgreSQL + pgvector)
-- ✅ API endpoints (health, documents list/upload/download)
+- ✅ API endpoints (health, documents list/upload/download, chat)
 - ✅ Development environment with Docker Compose
 - ✅ Vector store service (pgvector integration)
 - ✅ MinIO integration for local S3-compatible storage
@@ -128,16 +128,20 @@ curl http://localhost:8001/api/v1/documents
 - ✅ Unit and integration tests
 - ✅ Frontend React application (built, not deployed)
 - ✅ Document redaction API integration (polcn/redact)
+- ✅ Mock services for embeddings and LLM (automatic fallback)
+- ✅ Full document processing pipeline with mock services
+- ✅ Chat/Q&A functionality with mock responses
 
-### Working but Limited
-- ⚠️ Document processing (requires Bedrock access)
-- ⚠️ Embeddings service (requires Bedrock Titan access)
-- ⚠️ LLM service (requires Bedrock Claude access)
-- ⚠️ File redaction (integrated polcn/redact API, experiencing 403 errors)
+### Working with Mock Services
+- ✅ Document processing (works with mock embeddings)
+- ✅ Embeddings service (automatic fallback to mock when Bedrock unavailable)
+- ✅ LLM service (mock responses with document references)
+- ✅ Vector search (works with mock embeddings)
+- ⚠️ File redaction (integrated polcn/redact API, experiencing 403 errors but has fallback)
 
 ### In Progress
 - 🔄 JWT Authentication implementation
-- 🔄 Mock services for local development
+- 🔄 Frontend deployment and testing
 - 🔄 Production deployment configuration
 
 ## Architecture
@@ -230,6 +234,8 @@ This is a POC with the following constraints:
 - English language support only
 - No real-time collaboration features
 - Limited to 10MB file uploads
+- Mock services provide simplified responses for demo purposes
+- Production deployment requires proper AWS Bedrock access for optimal performance
 
 ## Contributing
 

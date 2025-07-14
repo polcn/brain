@@ -1,5 +1,5 @@
 """
-Embeddings service for generating text embeddings using Amazon Bedrock.
+Embeddings service for generating text embeddings using Amazon Bedrock or mock implementation.
 """
 import asyncio
 import json
@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 import boto3
 from botocore.exceptions import ClientError
+import hashlib
 
 from ..core.config import settings
 
@@ -15,18 +16,26 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingsService:
-    """Handles text embedding generation using Amazon Bedrock Titan model."""
+    """Handles text embedding generation using Amazon Bedrock Titan model or mock implementation."""
     
     def __init__(self):
-        self.client = boto3.client(
-            'bedrock-runtime',
-            region_name=settings.aws_region,
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key
-        )
-        self.model_id = settings.bedrock_embedding_model
-        self.max_batch_size = 25  # Titan supports batches up to 25
-        self.max_text_length = 8192  # Titan max input length
+        self.use_mock = False
+        try:
+            self.client = boto3.client(
+                'bedrock-runtime',
+                region_name=settings.aws_region,
+                aws_access_key_id=settings.aws_access_key_id,
+                aws_secret_access_key=settings.aws_secret_access_key
+            )
+            self.model_id = settings.bedrock_embedding_model
+            self.max_batch_size = 25  # Titan supports batches up to 25
+            self.max_text_length = 8192  # Titan max input length
+        except Exception as e:
+            logger.warning(f"Failed to initialize Bedrock client: {e}. Using mock embeddings.")
+            self.use_mock = True
+            self.model_id = "mock-embeddings"
+            self.max_batch_size = 100
+            self.max_text_length = 8192
     
     async def generate_embedding(
         self,
@@ -64,6 +73,10 @@ class EmbeddingsService:
         if not texts:
             return []
         
+        # Use mock implementation if Bedrock is not available
+        if self.use_mock:
+            return await self._generate_mock_embeddings(texts, normalize)
+        
         # Truncate texts that are too long
         processed_texts = []
         for text in texts:
@@ -76,8 +89,13 @@ class EmbeddingsService:
         all_embeddings = []
         for i in range(0, len(processed_texts), self.max_batch_size):
             batch = processed_texts[i:i + self.max_batch_size]
-            batch_embeddings = await self._generate_batch(batch, normalize)
-            all_embeddings.extend(batch_embeddings)
+            try:
+                batch_embeddings = await self._generate_batch(batch, normalize)
+                all_embeddings.extend(batch_embeddings)
+            except Exception as e:
+                logger.error(f"Bedrock embedding failed: {e}. Falling back to mock embeddings.")
+                self.use_mock = True
+                return await self._generate_mock_embeddings(texts, normalize)
         
         return all_embeddings
     
@@ -147,6 +165,35 @@ class EmbeddingsService:
         
         return embeddings
     
+    async def _generate_mock_embeddings(
+        self,
+        texts: List[str],
+        normalize: bool = True
+    ) -> List[np.ndarray]:
+        """Generate mock embeddings for testing/development."""
+        embeddings = []
+        
+        for text in texts:
+            # Create deterministic embedding based on text hash
+            text_hash = hashlib.sha256(text.encode()).hexdigest()
+            
+            # Use hash to seed random generator for consistent results
+            np.random.seed(int(text_hash[:8], 16))
+            
+            # Generate random embedding
+            embedding = np.random.normal(0, 1, 1536).astype(np.float32)
+            
+            # Normalize if requested
+            if normalize:
+                norm = np.linalg.norm(embedding)
+                if norm > 0:
+                    embedding = embedding / norm
+            
+            embeddings.append(embedding)
+        
+        logger.info(f"Generated {len(embeddings)} mock embeddings")
+        return embeddings
+    
     async def estimate_tokens(self, text: str) -> int:
         """
         Estimate the number of tokens in the text.
@@ -165,7 +212,8 @@ class EmbeddingsService:
                 "status": "healthy",
                 "model": self.model_id,
                 "embedding_dimensions": test_embedding.shape[0],
-                "test_successful": True
+                "test_successful": True,
+                "using_mock": self.use_mock
             }
             
         except Exception as e:
@@ -174,5 +222,6 @@ class EmbeddingsService:
                 "status": "unhealthy",
                 "model": self.model_id,
                 "error": str(e),
-                "test_successful": False
+                "test_successful": False,
+                "using_mock": self.use_mock
             }

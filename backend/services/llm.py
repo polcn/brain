@@ -1,5 +1,5 @@
 """
-LLM service for chat and question answering using Amazon Bedrock.
+LLM service for chat and question answering using Amazon Bedrock or mock implementation.
 """
 import asyncio
 import json
@@ -7,6 +7,7 @@ import logging
 from typing import List, Dict, Any, Optional, AsyncGenerator, Union
 import boto3
 from botocore.exceptions import ClientError
+import random
 
 from ..core.config import settings
 
@@ -14,18 +15,26 @@ logger = logging.getLogger(__name__)
 
 
 class LLMService:
-    """Handles LLM interactions using Amazon Bedrock Claude model."""
+    """Handles LLM interactions using Amazon Bedrock Claude model or mock implementation."""
     
     def __init__(self):
-        self.client = boto3.client(
-            'bedrock-runtime',
-            region_name=settings.aws_region,
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key
-        )
-        self.model_id = settings.bedrock_model_id
-        self.max_tokens = 4096
-        self.temperature = 0.7
+        self.use_mock = False
+        try:
+            self.client = boto3.client(
+                'bedrock-runtime',
+                region_name=settings.aws_region,
+                aws_access_key_id=settings.aws_access_key_id,
+                aws_secret_access_key=settings.aws_secret_access_key
+            )
+            self.model_id = settings.bedrock_model_id
+            self.max_tokens = 4096
+            self.temperature = 0.7
+        except Exception as e:
+            logger.warning(f"Failed to initialize Bedrock client: {e}. Using mock LLM.")
+            self.use_mock = True
+            self.model_id = "mock-llm"
+            self.max_tokens = 4096
+            self.temperature = 0.7
     
     async def generate_response(
         self,
@@ -46,13 +55,22 @@ class LLMService:
         Returns:
             Generated response (string or async generator for streaming)
         """
+        # Use mock implementation if Bedrock is not available
+        if self.use_mock:
+            return await self._generate_mock_response(query, context_chunks, chat_history, stream)
+        
         # Build the prompt
         prompt = self._build_prompt(query, context_chunks, chat_history)
         
-        if stream:
-            return self._stream_response(prompt)
-        else:
-            return await self._generate_complete(prompt)
+        try:
+            if stream:
+                return self._stream_response(prompt)
+            else:
+                return await self._generate_complete(prompt)
+        except Exception as e:
+            logger.error(f"Bedrock LLM failed: {e}. Falling back to mock LLM.")
+            self.use_mock = True
+            return await self._generate_mock_response(query, context_chunks, chat_history, stream)
     
     def _build_prompt(
         self,
@@ -195,6 +213,61 @@ class LLMService:
             else:
                 raise ValueError(f"Unexpected response format: {response_body.keys()}")
     
+    async def _generate_mock_response(
+        self,
+        query: str,
+        context_chunks: List[Dict[str, Any]],
+        chat_history: Optional[List[Dict[str, str]]] = None,
+        stream: bool = False
+    ) -> Union[AsyncGenerator[str, None], str]:
+        """Generate a mock response for testing/development."""
+        # Create a realistic response based on the query and context
+        response_templates = [
+            "Based on the provided documents, I can answer your question about '{query}'. ",
+            "According to the information in the documents, ",
+            "From the context provided, I found that ",
+            "The documents indicate that "
+        ]
+        
+        # Select a random template
+        template = random.choice(response_templates)
+        response = template.format(query=query)
+        
+        # Add context-specific information
+        if context_chunks:
+            doc_names = set()
+            for chunk in context_chunks[:3]:  # Use first 3 chunks
+                doc_name = chunk.get('metadata', {}).get('document_name', 'Unknown')
+                doc_names.add(doc_name)
+            
+            if doc_names:
+                response += f"This information comes from the following documents: {', '.join(sorted(doc_names))}. "
+        
+        # Add a generic helpful response
+        mock_responses = [
+            "I've analyzed the relevant sections and can provide you with a comprehensive answer.",
+            "The documents contain several key points that address your question.",
+            "Based on my analysis of the document content, here's what I found.",
+            "Let me summarize the most relevant information from the documents."
+        ]
+        
+        response += random.choice(mock_responses)
+        
+        # Add disclaimer
+        response += " (This is a mock response for development/testing purposes.)"
+        
+        if stream:
+            return self._mock_stream_response(response)
+        else:
+            return response
+    
+    async def _mock_stream_response(self, response: str) -> AsyncGenerator[str, None]:
+        """Stream mock response word by word."""
+        words = response.split()
+        for word in words:
+            yield word + " "
+            await asyncio.sleep(0.05)  # Simulate streaming delay
+    
     async def summarize_document(
         self,
         chunks: List[str],
@@ -210,6 +283,9 @@ class LLMService:
         Returns:
             Document summary
         """
+        if self.use_mock:
+            return f"This is a mock summary of the document with {len(chunks)} chunks. The document discusses various topics and contains important information. (Mock response for development/testing purposes.)"
+        
         # Combine chunks up to a reasonable length
         combined_text = '\n\n'.join(chunks[:10])  # Use first 10 chunks
         
@@ -219,7 +295,12 @@ class LLMService:
 
 Summary:"""
         
-        return await self._generate_complete(prompt)
+        try:
+            return await self._generate_complete(prompt)
+        except Exception as e:
+            logger.error(f"Summary generation failed: {e}. Using mock summary.")
+            self.use_mock = True
+            return f"This is a mock summary of the document with {len(chunks)} chunks. The document discusses various topics and contains important information. (Mock response for development/testing purposes.)"
     
     async def extract_topics(
         self,
@@ -236,6 +317,10 @@ Summary:"""
         Returns:
             List of topic strings
         """
+        if self.use_mock:
+            mock_topics = ["Document Analysis", "Key Information", "Important Points", "Data Summary", "Content Overview"]
+            return mock_topics[:num_topics]
+        
         prompt = f"""Extract {num_topics} key topics or themes from the following text. 
 Return only the topics as a comma-separated list:
 
@@ -243,23 +328,33 @@ Return only the topics as a comma-separated list:
 
 Topics:"""
         
-        response = await self._generate_complete(prompt)
-        
-        # Parse topics from response
-        topics = [t.strip() for t in response.split(',')]
-        return topics[:num_topics]
+        try:
+            response = await self._generate_complete(prompt)
+            
+            # Parse topics from response
+            topics = [t.strip() for t in response.split(',')]
+            return topics[:num_topics]
+        except Exception as e:
+            logger.error(f"Topic extraction failed: {e}. Using mock topics.")
+            self.use_mock = True
+            mock_topics = ["Document Analysis", "Key Information", "Important Points", "Data Summary", "Content Overview"]
+            return mock_topics[:num_topics]
     
     async def health_check(self) -> Dict[str, Any]:
         """Check if the LLM service is working."""
         try:
-            # Try a simple completion
-            response = await self._generate_complete("Hello, this is a test. Please respond with 'OK'.")
+            if self.use_mock:
+                response = "OK (Mock response for development/testing purposes.)"
+            else:
+                # Try a simple completion
+                response = await self._generate_complete("Hello, this is a test. Please respond with 'OK'.")
             
             return {
                 "status": "healthy",
                 "model": self.model_id,
                 "test_successful": bool(response),
-                "response_preview": response[:50] if response else None
+                "response_preview": response[:50] if response else None,
+                "using_mock": self.use_mock
             }
             
         except Exception as e:
@@ -268,5 +363,6 @@ Topics:"""
                 "status": "unhealthy",
                 "model": self.model_id,
                 "error": str(e),
-                "test_successful": False
+                "test_successful": False,
+                "using_mock": self.use_mock
             }
