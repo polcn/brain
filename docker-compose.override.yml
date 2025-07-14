@@ -1,0 +1,68 @@
+# Development overrides for docker-compose
+# This file is automatically loaded by docker-compose and overrides settings in docker-compose.yml
+
+version: '3.8'
+
+services:
+  backend:
+    # Development-specific settings
+    environment:
+      DEBUG: "true"
+      LOG_LEVEL: "DEBUG"
+      # Use MinIO for S3 in development
+      AWS_ACCESS_KEY_ID: "minioadmin"
+      AWS_SECRET_ACCESS_KEY: "minioadmin"
+      S3_ENDPOINT_URL: "http://minio:9000"
+      # Disable SSL verification for local MinIO
+      AWS_VERIFY_SSL: "false"
+    # Mount source code for hot reload
+    volumes:
+      - ./backend:/app/backend:delegated
+      - ./alembic:/app/alembic:delegated
+      - ./scripts:/app/scripts:delegated
+      - ./tests:/app/tests:delegated
+      - ./pytest.ini:/app/pytest.ini:ro
+      - ./requirements.txt:/app/requirements.txt:ro
+      - ./requirements-dev.txt:/app/requirements-dev.txt:ro
+    # Override command to install dev dependencies and run with reload
+    command: >
+      sh -c "
+        pip install -r requirements-dev.txt &&
+        python scripts/wait_for_db.py &&
+        alembic upgrade head &&
+        uvicorn backend.app:app --host 0.0.0.0 --port 8001 --reload --reload-dir backend
+      "
+
+  # In development, always run pgAdmin
+  pgadmin:
+    profiles: []  # Remove profile to always run
+
+  # Add a service for running tests
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: brain-test
+    environment:
+      DATABASE_URL: "postgresql://brain_user:brain_password@postgres:5432/brain_test"
+      REDIS_URL: "redis://redis:6379/1"
+      TESTING: "true"
+      LOG_LEVEL: "DEBUG"
+    volumes:
+      - ./backend:/app/backend:ro
+      - ./tests:/app/tests:ro
+      - ./pytest.ini:/app/pytest.ini:ro
+      - ./requirements-dev.txt:/app/requirements-dev.txt:ro
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - brain-network
+    profiles:
+      - test
+    command: >
+      sh -c "
+        pip install -r requirements-dev.txt &&
+        python scripts/wait_for_db.py &&
+        pytest -v
+      "

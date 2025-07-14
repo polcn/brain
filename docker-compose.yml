@@ -1,13 +1,15 @@
 version: '3.8'
 
 services:
+  # PostgreSQL with pgvector
   postgres:
-    image: pgvector/pgvector:pg15
+    image: ankane/pgvector:v0.5.1
     container_name: brain-postgres
     environment:
       POSTGRES_USER: brain_user
       POSTGRES_PASSWORD: brain_password
       POSTGRES_DB: brain
+      POSTGRES_HOST_AUTH_METHOD: md5
     ports:
       - "5433:5432"
     volumes:
@@ -18,7 +20,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - brain-network
 
+  # Redis for caching
   redis:
     image: redis:7-alpine
     container_name: brain-redis
@@ -32,6 +37,57 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - brain-network
+
+  # FastAPI backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: brain-backend
+    environment:
+      DATABASE_URL: "postgresql://brain_user:brain_password@postgres:5432/brain"
+      REDIS_URL: "redis://redis:6379"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-brain-documents}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-anthropic.claude-instant-v1}
+      BEDROCK_EMBEDDING_MODEL: ${BEDROCK_EMBEDDING_MODEL:-amazon.titan-embed-text-v1}
+      PYTHONUNBUFFERED: 1
+      USE_LOCAL_STORAGE: ${USE_LOCAL_STORAGE:-true}
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./backend:/app/backend
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+      - ./scripts:/app/scripts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - brain-network
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        python scripts/wait_for_db.py &&
+        echo 'Running database migrations...' &&
+        alembic upgrade head &&
+        echo 'Starting application...' &&
+        uvicorn backend.app:app --host 0.0.0.0 --port 8001 --reload
+      "
 
   # Development only - MinIO as local S3
   minio:
@@ -51,8 +107,72 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - brain-network
+
+  # MinIO Client to create buckets
+  minio-init:
+    image: minio/mc:latest
+    container_name: brain-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+        mc config host add minio http://minio:9000 minioadmin minioadmin &&
+        mc mb minio/brain-documents --ignore-existing &&
+        mc policy set public minio/brain-documents &&
+        echo 'MinIO bucket created successfully'
+      "
+    networks:
+      - brain-network
+
+  # Frontend (placeholder for React app)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: brain-frontend
+    environment:
+      REACT_APP_API_URL: http://localhost:8001
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - brain-network
+    profiles:
+      - frontend
+
+  # pgAdmin for database management (optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: brain-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@brain.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - brain-network
+    profiles:
+      - tools
 
 volumes:
   postgres_data:
   redis_data:
   minio_data:
+  pgadmin_data:
+
+networks:
+  brain-network:
+    driver: bridge

@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     aws_secret_access_key: Optional[str] = None
     aws_region: str = "us-east-1"
     s3_bucket_name: str = "brain-documents"
+    s3_endpoint_url: Optional[str] = None  # For MinIO/LocalStack
+    use_local_storage: bool = False  # Flag for local development
     
     # Bedrock
     bedrock_model_id: str = "anthropic.claude-instant-v1"

@@ -38,12 +38,19 @@ class DocumentProcessor:
     ):
         self.vector_store = vector_store
         self.embeddings_service = embeddings_service
-        self.s3_client = boto3.client(
-            's3',
-            region_name=settings.aws_region,
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key
-        )
+        # Create S3 client with optional endpoint URL for MinIO/LocalStack
+        s3_config = {
+            'region_name': settings.aws_region,
+            'aws_access_key_id': settings.aws_access_key_id,
+            'aws_secret_access_key': settings.aws_secret_access_key
+        }
+        
+        if settings.s3_endpoint_url:
+            s3_config['endpoint_url'] = settings.s3_endpoint_url
+            s3_config['use_ssl'] = False  # MinIO usually runs without SSL locally
+            s3_config['verify'] = False
+        
+        self.s3_client = boto3.client('s3', **s3_config)
         self.chunk_size = 1000  # characters
         self.chunk_overlap = 200  # characters
         self.redact_path = "/usr/local/bin/redact"  # Path to polcn/redact tool

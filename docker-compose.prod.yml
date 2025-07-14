@@ -1,0 +1,66 @@
+# Production overrides for docker-compose
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+version: '3.8'
+
+services:
+  backend:
+    # Production optimizations
+    restart: always
+    environment:
+      DEBUG: "false"
+      LOG_LEVEL: "INFO"
+      # Use real AWS services in production
+      S3_ENDPOINT_URL: ""  # Remove to use real S3
+      USE_LOCAL_STORAGE: "false"
+    # No volume mounts in production
+    volumes: []
+    # Production command without reload
+    command: >
+      sh -c "
+        python scripts/wait_for_db.py &&
+        alembic upgrade head &&
+        gunicorn backend.app:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001
+      "
+
+  postgres:
+    restart: always
+    # Consider using managed database in production
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+
+  redis:
+    restart: always
+    # Add password in production
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+
+  # Remove development services
+  minio:
+    profiles:
+      - never
+
+  minio-init:
+    profiles:
+      - never
+
+  pgadmin:
+    profiles:
+      - never
+
+  # Add nginx for production
+  nginx:
+    image: nginx:alpine
+    container_name: brain-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+    networks:
+      - brain-network
