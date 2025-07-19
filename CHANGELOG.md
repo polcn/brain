@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Repository cleanup: Removed temporary test files and scripts
+  - Removed test documentation files (quick_test.md, test_results.md, ssh_tunnel_guide.md)
+  - Removed test scripts (interactive_test.sh, test_system.sh)
+
 ### Added
 - Initial project structure with PostgreSQL + pgvector architecture
 - Core document processing pipeline design
